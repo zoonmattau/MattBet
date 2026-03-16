@@ -18,9 +18,44 @@ const CORRELATED_GROUPS = [
   ['winning-team', 'group-1-total-points', 'group-2-total-points', 'group-3-total-points'],
 ];
 
-// Discount tiers
-const DISCOUNT_LIGHT = 0.85;  // loosely related (e.g. trip champion + winning team)
-const DISCOUNT_HEAVY = 0.50;  // heavily correlated (e.g. H2H + line from same match)
+// Implication pairs: if the first slug's selection wins, the second slug's selection is guaranteed
+// [harder market slug suffix, easier market slug suffix]
+// These are within the same match/event -- matched by slug prefix
+const SAME_MATCH_IMPLICATIONS: [string, string][] = [
+  ['-line', '-h2h'],      // covering the line guarantees winning h2h
+  ['-margin', '-h2h'],    // winning margin over guarantees h2h win (contextual)
+];
+
+// Cross-market implications: [harder slug, easier slug] where same player selected
+const CROSS_IMPLICATIONS: [string, string][] = [
+  ['friday-stableford-winner', 'friday-top-3'],
+  ['friday-stableford-winner', 'friday-top-4'],
+  ['friday-stableford-winner', 'friday-top-half'],
+  ['friday-top-3', 'friday-top-4'],
+  ['friday-top-3', 'friday-top-half'],
+  ['friday-top-4', 'friday-top-half'],
+  ['friday-last-place', 'friday-bottom-4'],
+  ['friday-last-place', 'friday-bottom-half'],
+  ['friday-bottom-4', 'friday-bottom-half'],
+  ['trip-champion', 'overall-top-3'],
+  ['wooden-spoon', 'overall-bottom-3'],
+];
+
+// Partial correlation discount for related-but-not-implied legs
+const PARTIAL_CORRELATION = 0.80;
+const PARTIAL_GROUPS = [
+  ['winning-team', 'group-1-total-points', 'group-2-total-points', 'group-3-total-points'],
+  ['trip-champion', 'winning-team'],
+  ['friday-best-team', 'friday-best-of-group'],
+];
+
+function getMatchPrefix(slug: string): string | null {
+  // r2-m1-h2h -> r2-m1, r4-hugo-jacko-h2h -> r4-hugo-jacko
+  const m = slug.match(/^(r[234]-m\d)/);
+  if (m) return m[1];
+  const r4 = slug.match(/^(r4-[a-z]+-[a-z]+)-/);
+  return r4 ? r4[1] : null;
+}
 
 function getConflict(items: BetSlipItem[]): string | null {
   // Check if a player is picked for both a top AND bottom market
@@ -44,47 +79,83 @@ function getConflict(items: BetSlipItem[]): string | null {
   return null;
 }
 
-function getCorrelations(items: BetSlipItem[]): { light: number; heavy: number } {
-  const slugs = items.map((i) => i.market.slug);
-  let light = 0;
-  let heavy = 0;
+function calculateMultiOdds(items: BetSlipItem[]): { raw: number; adjusted: number; isCorrelated: boolean; droppedLegs: string[] } {
+  const raw = items.reduce((acc, item) => acc * Number(item.selection.odds_decimal), 1);
+  if (items.length < 2) return { raw, adjusted: raw, isCorrelated: false, droppedLegs: [] };
 
-  // Light correlations: same broad group
-  for (const group of CORRELATED_GROUPS) {
-    const matches = slugs.filter((s) => group.includes(s));
-    if (matches.length >= 2) light += matches.length - 1;
+  // Build list of effective legs after removing implied ones
+  const dropped = new Set<string>(); // selection IDs of legs that are implied by another
+
+  for (let i = 0; i < items.length; i++) {
+    for (let j = 0; j < items.length; j++) {
+      if (i === j || dropped.has(items[i].selection.id) || dropped.has(items[j].selection.id)) continue;
+
+      const a = items[i];
+      const b = items[j];
+
+      // Check same-match implications (line implies h2h etc)
+      const prefixA = getMatchPrefix(a.market.slug);
+      const prefixB = getMatchPrefix(b.market.slug);
+      if (prefixA && prefixB && prefixA === prefixB) {
+        const suffixA = a.market.slug.replace(prefixA, '');
+        const suffixB = b.market.slug.replace(prefixB, '');
+        for (const [harder, easier] of SAME_MATCH_IMPLICATIONS) {
+          // If a is the harder bet and b is the easier, b is implied
+          if (suffixA === harder && suffixB === easier) {
+            dropped.add(b.selection.id);
+          }
+          if (suffixB === harder && suffixA === easier) {
+            dropped.add(a.selection.id);
+          }
+        }
+      }
+
+      // Check cross-market implications (winner implies top 3 etc)
+      // Only applies when same player/team is selected in both
+      if (a.selection.name === b.selection.name) {
+        for (const [harder, easier] of CROSS_IMPLICATIONS) {
+          if (a.market.slug === harder && b.market.slug === easier) {
+            dropped.add(b.selection.id);
+          }
+          if (b.market.slug === harder && a.market.slug === easier) {
+            dropped.add(a.selection.id);
+          }
+        }
+      }
+    }
   }
 
-  // Heavy correlations: same match prefix (h2h + line + margin + totals from same match)
-  const matchPrefixes = slugs
-    .map((s) => {
-      const m = s.match(/^(r[234]-m\d|r4-[a-z]+-[a-z]+(?=-))/)
-        || s.match(/^(r[234]-m\d)/);
-      if (m) return m[1];
-      // Handle r4 slugs like r4-hugo-jacko-h2h -> r4-hugo-jacko
-      const r4 = s.match(/^(r4-[a-z]+-[a-z]+)-/);
-      return r4 ? r4[1] : null;
-    })
-    .filter(Boolean);
+  // Calculate odds from effective legs only
+  const effectiveLegs = items.filter((item) => !dropped.has(item.selection.id));
+  let adjusted = effectiveLegs.reduce((acc, item) => acc * Number(item.selection.odds_decimal), 1);
+
+  // Apply partial correlation discount for remaining related legs
+  const effectiveSlugs = effectiveLegs.map((i) => i.market.slug);
+  let partialCount = 0;
+  for (const group of PARTIAL_GROUPS) {
+    const matches = effectiveSlugs.filter((s) => group.includes(s));
+    if (matches.length >= 2) partialCount += matches.length - 1;
+  }
+  // Same match legs that weren't dropped (e.g. h2h + total holes)
+  const effectivePrefixes = effectiveLegs.map((i) => getMatchPrefix(i.market.slug)).filter(Boolean);
   const prefixCounts: Record<string, number> = {};
-  matchPrefixes.forEach((p) => { prefixCounts[p!] = (prefixCounts[p!] || 0) + 1; });
-  Object.values(prefixCounts).forEach((c) => { if (c >= 2) heavy += c - 1; });
+  effectivePrefixes.forEach((p) => { prefixCounts[p!] = (prefixCounts[p!] || 0) + 1; });
+  Object.values(prefixCounts).forEach((c) => { if (c >= 2) partialCount += c - 1; });
 
-  return { light, heavy };
-}
+  if (partialCount > 0) {
+    adjusted *= Math.pow(PARTIAL_CORRELATION, partialCount);
+  }
 
-function calculateMultiOdds(items: BetSlipItem[]): { raw: number; adjusted: number; isCorrelated: boolean } {
-  const raw = items.reduce((acc, item) => acc * Number(item.selection.odds_decimal), 1);
-  const { light, heavy } = getCorrelations(items);
-  const totalCorrelations = light + heavy;
+  const droppedLegs = items
+    .filter((item) => dropped.has(item.selection.id))
+    .map((item) => item.market.title);
 
-  if (totalCorrelations === 0) return { raw, adjusted: raw, isCorrelated: false };
-
-  const adjusted = raw
-    * Math.pow(DISCOUNT_LIGHT, light)
-    * Math.pow(DISCOUNT_HEAVY, heavy);
-
-  return { raw, adjusted, isCorrelated: true };
+  return {
+    raw,
+    adjusted: parseFloat(adjusted.toFixed(2)),
+    isCorrelated: dropped.size > 0 || partialCount > 0,
+    droppedLegs,
+  };
 }
 
 interface BetSlipProps {
@@ -136,9 +207,9 @@ export function BetSlip({ items, onRemove, onClear, onBetPlaced }: BetSlipProps)
   const getSingleStake = (id: string) => parseFloat(singleStakes[id] || '0') || 0;
   const multiStakeNum = parseFloat(multiStake || '0') || 0;
 
-  const { raw: rawMultiOdds, adjusted: multiOdds, isCorrelated } = canMulti
+  const { raw: rawMultiOdds, adjusted: multiOdds, isCorrelated, droppedLegs } = canMulti
     ? calculateMultiOdds(items)
-    : { raw: 1, adjusted: 1, isCorrelated: false };
+    : { raw: 1, adjusted: 1, isCorrelated: false, droppedLegs: [] as string[] };
   const multiPayout = multiStakeNum * multiOdds;
 
   const singlesTotalStake = items.reduce((s, item) => s + getSingleStake(item.selection.id), 0);
@@ -319,7 +390,9 @@ export function BetSlip({ items, onRemove, onClear, onBetPlaced }: BetSlipProps)
             </div>
             {isCorrelated && (
               <div className="text-[10px] text-gold/60 mb-2">
-                Same-game multi -- correlated odds adjusted
+                {droppedLegs.length > 0
+                  ? `${droppedLegs.length} implied leg${droppedLegs.length > 1 ? 's' : ''} absorbed -- odds adjusted`
+                  : 'Correlated legs -- odds adjusted'}
               </div>
             )}
             <div className="flex items-center gap-3">
