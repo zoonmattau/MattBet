@@ -18,7 +18,9 @@ const CORRELATED_GROUPS = [
   ['winning-team', 'group-1-total-points', 'group-2-total-points', 'group-3-total-points'],
 ];
 
-const CORRELATION_DISCOUNT = 0.82;
+// Discount tiers
+const DISCOUNT_LIGHT = 0.85;  // loosely related (e.g. trip champion + winning team)
+const DISCOUNT_HEAVY = 0.50;  // heavily correlated (e.g. H2H + line from same match)
 
 function getConflict(items: BetSlipItem[]): string | null {
   // Check if a player is picked for both a top AND bottom market
@@ -42,36 +44,47 @@ function getConflict(items: BetSlipItem[]): string | null {
   return null;
 }
 
-function getCorrelationCount(items: BetSlipItem[]): number {
+function getCorrelations(items: BetSlipItem[]): { light: number; heavy: number } {
   const slugs = items.map((i) => i.market.slug);
-  let count = 0;
+  let light = 0;
+  let heavy = 0;
 
+  // Light correlations: same broad group
   for (const group of CORRELATED_GROUPS) {
     const matches = slugs.filter((s) => group.includes(s));
-    if (matches.length >= 2) count += matches.length - 1;
+    if (matches.length >= 2) light += matches.length - 1;
   }
 
-  // Same match prefix
+  // Heavy correlations: same match prefix (h2h + line + margin + totals from same match)
   const matchPrefixes = slugs
     .map((s) => {
-      const m = s.match(/^(r[234]-m\d+|r4-[a-z]+-[a-z]+)/);
-      return m ? m[1] : null;
+      const m = s.match(/^(r[234]-m\d|r4-[a-z]+-[a-z]+(?=-))/)
+        || s.match(/^(r[234]-m\d)/);
+      if (m) return m[1];
+      // Handle r4 slugs like r4-hugo-jacko-h2h -> r4-hugo-jacko
+      const r4 = s.match(/^(r4-[a-z]+-[a-z]+)-/);
+      return r4 ? r4[1] : null;
     })
     .filter(Boolean);
   const prefixCounts: Record<string, number> = {};
   matchPrefixes.forEach((p) => { prefixCounts[p!] = (prefixCounts[p!] || 0) + 1; });
-  Object.values(prefixCounts).forEach((c) => { if (c >= 2) count += c - 1; });
+  Object.values(prefixCounts).forEach((c) => { if (c >= 2) heavy += c - 1; });
 
-  return count;
+  return { light, heavy };
 }
 
 function calculateMultiOdds(items: BetSlipItem[]): { raw: number; adjusted: number; isCorrelated: boolean } {
   const raw = items.reduce((acc, item) => acc * Number(item.selection.odds_decimal), 1);
-  const correlations = getCorrelationCount(items);
-  const adjusted = correlations > 0
-    ? raw * Math.pow(CORRELATION_DISCOUNT, correlations)
-    : raw;
-  return { raw, adjusted, isCorrelated: correlations > 0 };
+  const { light, heavy } = getCorrelations(items);
+  const totalCorrelations = light + heavy;
+
+  if (totalCorrelations === 0) return { raw, adjusted: raw, isCorrelated: false };
+
+  const adjusted = raw
+    * Math.pow(DISCOUNT_LIGHT, light)
+    * Math.pow(DISCOUNT_HEAVY, heavy);
+
+  return { raw, adjusted, isCorrelated: true };
 }
 
 interface BetSlipProps {
