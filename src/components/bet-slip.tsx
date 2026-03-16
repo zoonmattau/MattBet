@@ -1,9 +1,78 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { BetSlipItem } from '@/lib/types';
 import { formatCurrency } from '@/lib/exposure';
 import { createClient } from '@/lib/supabase/client';
+
+// Top = good finish, Bottom = bad finish
+const TOP_SLUGS = ['trip-champion', 'overall-top-3', 'friday-stableford-winner', 'friday-top-3', 'friday-top-4', 'friday-top-half'];
+const BOTTOM_SLUGS = ['wooden-spoon', 'overall-bottom-3', 'friday-bottom-half', 'friday-bottom-4', 'friday-last-place'];
+
+// Correlated groups -- odds get discounted when combined
+const CORRELATED_GROUPS = [
+  ['trip-champion', 'overall-top-3', 'winning-team'],
+  ['wooden-spoon', 'overall-bottom-3'],
+  ['friday-stableford-winner', 'friday-top-3', 'friday-top-4', 'friday-top-half', 'friday-best-team', 'friday-best-of-group'],
+  ['friday-bottom-half', 'friday-bottom-4', 'friday-last-place'],
+  ['winning-team', 'group-1-total-points', 'group-2-total-points', 'group-3-total-points'],
+];
+
+const CORRELATION_DISCOUNT = 0.82;
+
+function getConflict(items: BetSlipItem[]): string | null {
+  // Check if a player is picked for both a top AND bottom market
+  for (const a of items) {
+    for (const b of items) {
+      if (a === b) continue;
+      const aIsTop = TOP_SLUGS.includes(a.market.slug);
+      const bIsBottom = BOTTOM_SLUGS.includes(b.market.slug);
+      if (aIsTop && bIsBottom && a.selection.name === b.selection.name) {
+        return `${a.selection.name} can't both ${a.market.title.toLowerCase()} and ${b.market.title.toLowerCase()}`;
+      }
+      if (bIsBottom && aIsTop && b.selection.name === a.selection.name) continue; // already caught
+      // Reverse check
+      const aIsBottom = BOTTOM_SLUGS.includes(a.market.slug);
+      const bIsTop = TOP_SLUGS.includes(b.market.slug);
+      if (aIsBottom && bIsTop && a.selection.name === b.selection.name) {
+        return `${a.selection.name} can't both ${b.market.title.toLowerCase()} and ${a.market.title.toLowerCase()}`;
+      }
+    }
+  }
+  return null;
+}
+
+function getCorrelationCount(items: BetSlipItem[]): number {
+  const slugs = items.map((i) => i.market.slug);
+  let count = 0;
+
+  for (const group of CORRELATED_GROUPS) {
+    const matches = slugs.filter((s) => group.includes(s));
+    if (matches.length >= 2) count += matches.length - 1;
+  }
+
+  // Same match prefix
+  const matchPrefixes = slugs
+    .map((s) => {
+      const m = s.match(/^(r[234]-m\d+|r4-[a-z]+-[a-z]+)/);
+      return m ? m[1] : null;
+    })
+    .filter(Boolean);
+  const prefixCounts: Record<string, number> = {};
+  matchPrefixes.forEach((p) => { prefixCounts[p!] = (prefixCounts[p!] || 0) + 1; });
+  Object.values(prefixCounts).forEach((c) => { if (c >= 2) count += c - 1; });
+
+  return count;
+}
+
+function calculateMultiOdds(items: BetSlipItem[]): { raw: number; adjusted: number; isCorrelated: boolean } {
+  const raw = items.reduce((acc, item) => acc * Number(item.selection.odds_decimal), 1);
+  const correlations = getCorrelationCount(items);
+  const adjusted = correlations > 0
+    ? raw * Math.pow(CORRELATION_DISCOUNT, correlations)
+    : raw;
+  return { raw, adjusted, isCorrelated: correlations > 0 };
+}
 
 interface BetSlipProps {
   items: BetSlipItem[];
@@ -38,11 +107,25 @@ export function BetSlip({ items, onRemove, onClear, onBetPlaced }: BetSlipProps)
     );
   }
 
-  const canMulti = items.length >= 2;
+  const conflict = items.length >= 2 ? getConflict(items) : null;
+  const canMulti = items.length >= 2 && !conflict;
+  const prevCount = useRef(items.length);
+
+  useEffect(() => {
+    if (items.length >= 2 && prevCount.current < 2 && !getConflict(items)) {
+      setMode('multi');
+    }
+    if (items.length < 2 || getConflict(items)) {
+      setMode('singles');
+    }
+    prevCount.current = items.length;
+  }, [items]);
   const getSingleStake = (id: string) => parseFloat(singleStakes[id] || '0') || 0;
   const multiStakeNum = parseFloat(multiStake || '0') || 0;
 
-  const multiOdds = items.reduce((acc, item) => acc * Number(item.selection.odds_decimal), 1);
+  const { raw: rawMultiOdds, adjusted: multiOdds, isCorrelated } = canMulti
+    ? calculateMultiOdds(items)
+    : { raw: 1, adjusted: 1, isCorrelated: false };
   const multiPayout = multiStakeNum * multiOdds;
 
   const singlesTotalStake = items.reduce((s, item) => s + getSingleStake(item.selection.id), 0);
@@ -162,6 +245,12 @@ export function BetSlip({ items, onRemove, onClear, onBetPlaced }: BetSlipProps)
         </div>
       )}
 
+      {conflict && (
+        <div className="px-4 py-2 text-[11px] text-danger bg-danger/[0.06]">
+          Multi unavailable -- {conflict}
+        </div>
+      )}
+
       <div className="p-4 space-y-3">
         {/* Legs */}
         {items.map((item) => (
@@ -211,10 +300,15 @@ export function BetSlip({ items, onRemove, onClear, onBetPlaced }: BetSlipProps)
         {/* Multi combined odds + stake */}
         {mode === 'multi' && (
           <div className="pt-2 border-t border-white/[0.06]">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-1">
               <span className="text-[12px] text-white/50">Combined Odds</span>
               <span className="text-[14px] text-green-bright font-bold">${multiOdds.toFixed(2)}</span>
             </div>
+            {isCorrelated && (
+              <div className="text-[10px] text-gold/60 mb-2">
+                Same-game multi -- correlated odds adjusted
+              </div>
+            )}
             <div className="flex items-center gap-3">
               <div className="flex-1 relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-sm">$</span>
