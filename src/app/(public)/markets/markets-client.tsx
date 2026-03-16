@@ -89,6 +89,18 @@ export function MarketsClient({ markets }: MarketsClientProps) {
         'group-1-total-points': 7,
         'group-2-total-points': 8,
         'group-3-total-points': 9,
+        'lewis-total-pts': 10,
+        'jacob-total-pts': 11,
+        'finn-total-pts': 12,
+        'bails-total-pts': 13,
+        'jackson-total-pts': 14,
+        'brad-total-pts': 15,
+        'ando-total-pts': 16,
+        'hugo-total-pts': 17,
+        'mcnaughton-total-pts': 18,
+        'daniel-total-pts': 19,
+        'watto-total-pts': 20,
+        'parker-total-pts': 21,
       };
       const oa = order[a.slug] ?? 50;
       const ob = order[b.slug] ?? 50;
@@ -360,19 +372,27 @@ function OutrightsTab({
   const placingSlugs = ['overall-top-3', 'overall-bottom-3', 'wooden-spoon'];
   const specialSlugs = ['trip-hole-in-one', 'trip-lowest-gross'];
   const teamPointsSlugs = ['group-1-total-points', 'group-2-total-points', 'group-3-total-points'];
+  const playerPointsSlugs = [
+    'lewis-total-pts', 'jacob-total-pts', 'finn-total-pts',
+    'bails-total-pts', 'jackson-total-pts',
+    'brad-total-pts', 'ando-total-pts', 'hugo-total-pts',
+    'mcnaughton-total-pts', 'daniel-total-pts', 'watto-total-pts', 'parker-total-pts',
+  ];
 
   const winners = markets.filter((m) => winnerSlugs.includes(m.slug));
   const placings = markets.filter((m) => placingSlugs.includes(m.slug));
   const specials = markets.filter((m) => specialSlugs.includes(m.slug));
   const teamPoints = markets.filter((m) => teamPointsSlugs.includes(m.slug));
-  const other = markets.filter(
-    (m) => ![...winnerSlugs, ...placingSlugs, ...specialSlugs, ...teamPointsSlugs].includes(m.slug)
-  );
+  const playerPoints = markets.filter((m) => playerPointsSlugs.includes(m.slug))
+    .sort((a, b) => playerPointsSlugs.indexOf(a.slug) - playerPointsSlugs.indexOf(b.slug));
+  const allKnownSlugs = [...winnerSlugs, ...placingSlugs, ...specialSlugs, ...teamPointsSlugs, ...playerPointsSlugs];
+  const other = markets.filter((m) => !allKnownSlugs.includes(m.slug));
 
   const sections = [
     { label: 'Winners', markets: winners },
     { label: 'Placings', markets: placings },
     { label: 'Team Points', markets: teamPoints },
+    { label: 'Player Points', markets: playerPoints },
     { label: 'Trip Specials', markets: specials },
     ...(other.length > 0 ? [{ label: 'Other', markets: other }] : []),
   ].filter((s) => s.markets.length > 0);
