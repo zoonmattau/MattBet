@@ -173,6 +173,20 @@ export function BetSlip({ items, onRemove, onClear, onBetPlaced }: BetSlipProps)
   const [placing, setPlacing] = useState(false);
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const prevCount = useRef(items.length);
+
+  const conflict = items.length >= 2 ? getConflict(items) : null;
+  const canMulti = items.length >= 2 && !conflict;
+
+  useEffect(() => {
+    if (items.length >= 2 && prevCount.current < 2 && !getConflict(items)) {
+      setMode('multi');
+    }
+    if (items.length < 2 || getConflict(items)) {
+      setMode('singles');
+    }
+    prevCount.current = items.length;
+  }, [items]);
 
   if (items.length === 0 && !confirmation) return null;
 
@@ -190,20 +204,6 @@ export function BetSlip({ items, onRemove, onClear, onBetPlaced }: BetSlipProps)
       </div>
     );
   }
-
-  const conflict = items.length >= 2 ? getConflict(items) : null;
-  const canMulti = items.length >= 2 && !conflict;
-  const prevCount = useRef(items.length);
-
-  useEffect(() => {
-    if (items.length >= 2 && prevCount.current < 2 && !getConflict(items)) {
-      setMode('multi');
-    }
-    if (items.length < 2 || getConflict(items)) {
-      setMode('singles');
-    }
-    prevCount.current = items.length;
-  }, [items]);
   const getSingleStake = (id: string) => parseFloat(singleStakes[id] || '0') || 0;
   const multiStakeNum = parseFloat(multiStake || '0') || 0;
 
