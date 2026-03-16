@@ -58,7 +58,7 @@ export function impliedProbability(odds: number): number {
 }
 
 export function formatCurrency(amount: number): string {
-  return `$${amount.toFixed(2)}`;
+  return `$${amount.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export function formatOdds(odds: number): string {

@@ -49,37 +49,6 @@ export function ExposureClient({ markets, bets }: ExposureClientProps) {
         </div>
       </div>
 
-      {/* Top 5s */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div>
-          <h2 className="text-base font-bold text-white mb-3">Top 5 Riskiest</h2>
-          <div className="space-y-2">
-            {byWorstCase.slice(0, 5).map((exp) => (
-              <div key={exp.market.id} className="bg-navy-card border border-white/8 rounded-xl p-3 flex items-center justify-between">
-                <div>
-                  <div className="text-sm text-white font-medium">{exp.market.title}</div>
-                  <div className="text-xs text-white/30">Handle: {formatCurrency(exp.total_handle)}</div>
-                </div>
-                <div className="text-sm font-bold text-danger">{formatCurrency(exp.worst_case)}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div>
-          <h2 className="text-base font-bold text-white mb-3">Top 5 Most Profitable</h2>
-          <div className="space-y-2">
-            {byBestCase.slice(0, 5).map((exp) => (
-              <div key={exp.market.id} className="bg-navy-card border border-white/8 rounded-xl p-3 flex items-center justify-between">
-                <div>
-                  <div className="text-sm text-white font-medium">{exp.market.title}</div>
-                  <div className="text-xs text-white/30">Handle: {formatCurrency(exp.total_handle)}</div>
-                </div>
-                <div className="text-sm font-bold text-green-bright">+{formatCurrency(exp.best_case)}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
 
       {/* Market-by-Market - Expandable */}
       <div>

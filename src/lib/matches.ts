@@ -12,7 +12,7 @@ export interface MatchDefinition {
   marketSlugs: {
     h2h: string;
     line: string;
-    margin: string;
+
     totalA: string;
     totalB: string;
   };
@@ -31,7 +31,7 @@ export const MATCHES: MatchDefinition[] = [
     favourite: 'b',
     line: 1.5,
     slugPrefix: 'r2-m1',
-    marketSlugs: { h2h: 'r2-m1-h2h', line: 'r2-m1-line', margin: 'r2-m1-margin', totalA: 'r2-m1-hb-total', totalB: 'r2-m1-jf-total' },
+    marketSlugs: { h2h: 'r2-m1-h2h', line: 'r2-m1-line', totalA: 'r2-m1-hb-total', totalB: 'r2-m1-jf-total' },
   },
   {
     id: 'r2-m2',
@@ -44,7 +44,7 @@ export const MATCHES: MatchDefinition[] = [
     favourite: 'a',
     line: 2.5,
     slugPrefix: 'r2-m2',
-    marketSlugs: { h2h: 'r2-m2-h2h', line: 'r2-m2-line', margin: 'r2-m2-margin', totalA: 'r2-m2-lj-total', totalB: 'r2-m2-ah-total' },
+    marketSlugs: { h2h: 'r2-m2-h2h', line: 'r2-m2-line', totalA: 'r2-m2-lj-total', totalB: 'r2-m2-ah-total' },
   },
   {
     id: 'r2-m3',
@@ -57,7 +57,7 @@ export const MATCHES: MatchDefinition[] = [
     favourite: 'a',
     line: 2.5,
     slugPrefix: 'r2-m3',
-    marketSlugs: { h2h: 'r2-m3-h2h', line: 'r2-m3-line', margin: 'r2-m3-margin', totalA: 'r2-m3-bg-total', totalB: 'r2-m3-dp-total' },
+    marketSlugs: { h2h: 'r2-m3-h2h', line: 'r2-m3-line', totalA: 'r2-m3-bg-total', totalB: 'r2-m3-dp-total' },
   },
   // Round 3
   {
@@ -71,7 +71,7 @@ export const MATCHES: MatchDefinition[] = [
     favourite: 'a',
     line: 3.5,
     slugPrefix: 'r3-m1',
-    marketSlugs: { h2h: 'r3-m1-h2h', line: 'r3-m1-line', margin: 'r3-m1-margin', totalA: 'r3-m1-hb-total', totalB: 'r3-m1-dp-total' },
+    marketSlugs: { h2h: 'r3-m1-h2h', line: 'r3-m1-line', totalA: 'r3-m1-hb-total', totalB: 'r3-m1-dp-total' },
   },
   {
     id: 'r3-m2',
@@ -84,7 +84,7 @@ export const MATCHES: MatchDefinition[] = [
     favourite: 'a',
     line: 2.5,
     slugPrefix: 'r3-m2',
-    marketSlugs: { h2h: 'r3-m2-h2h', line: 'r3-m2-line', margin: 'r3-m2-margin', totalA: 'r3-m2-jf-total', totalB: 'r3-m2-bg-total' },
+    marketSlugs: { h2h: 'r3-m2-h2h', line: 'r3-m2-line', totalA: 'r3-m2-jf-total', totalB: 'r3-m2-bg-total' },
   },
   {
     id: 'r3-m3',
@@ -97,7 +97,7 @@ export const MATCHES: MatchDefinition[] = [
     favourite: 'a',
     line: 3.5,
     slugPrefix: 'r3-m3',
-    marketSlugs: { h2h: 'r3-m3-h2h', line: 'r3-m3-line', margin: 'r3-m3-margin', totalA: 'r3-m3-lj-total', totalB: 'r3-m3-ah-total' },
+    marketSlugs: { h2h: 'r3-m3-h2h', line: 'r3-m3-line', totalA: 'r3-m3-lj-total', totalB: 'r3-m3-ah-total' },
   },
   // Round 4
   {
@@ -111,7 +111,7 @@ export const MATCHES: MatchDefinition[] = [
     favourite: 'b',
     line: 1.5,
     slugPrefix: 'r4-hugo-jacko',
-    marketSlugs: { h2h: 'r4-hugo-jacko-h2h', line: 'r4-hugo-jacko-line', margin: 'r4-hugo-jacko-margin', totalA: 'r4-hugo-total', totalB: 'r4-jacko-total' },
+    marketSlugs: { h2h: 'r4-hugo-jacko-h2h', line: 'r4-hugo-jacko-line', totalA: 'r4-hugo-total', totalB: 'r4-jacko-total' },
   },
   {
     id: 'r4-lewis-bails',
@@ -124,7 +124,7 @@ export const MATCHES: MatchDefinition[] = [
     favourite: 'a',
     line: 2.5,
     slugPrefix: 'r4-lewis-bails',
-    marketSlugs: { h2h: 'r4-lewis-bails-h2h', line: 'r4-lewis-bails-line', margin: 'r4-lewis-bails-margin', totalA: 'r4-lewis-total', totalB: 'r4-bails-total' },
+    marketSlugs: { h2h: 'r4-lewis-bails-h2h', line: 'r4-lewis-bails-line', totalA: 'r4-lewis-total', totalB: 'r4-bails-total' },
   },
   {
     id: 'r4-finn-jacob',
@@ -137,7 +137,7 @@ export const MATCHES: MatchDefinition[] = [
     favourite: 'even',
     line: 1.5,
     slugPrefix: 'r4-finn-jacob',
-    marketSlugs: { h2h: 'r4-finn-jacob-h2h', line: 'r4-finn-jacob-line', margin: 'r4-finn-jacob-margin', totalA: 'r4-jacob-total', totalB: 'r4-finn-total' },
+    marketSlugs: { h2h: 'r4-finn-jacob-h2h', line: 'r4-finn-jacob-line', totalA: 'r4-jacob-total', totalB: 'r4-finn-total' },
   },
   {
     id: 'r4-ando-daniel',
@@ -150,7 +150,7 @@ export const MATCHES: MatchDefinition[] = [
     favourite: 'a',
     line: 1.5,
     slugPrefix: 'r4-ando-daniel',
-    marketSlugs: { h2h: 'r4-ando-daniel-h2h', line: 'r4-ando-daniel-line', margin: 'r4-ando-daniel-margin', totalA: 'r4-ando-total', totalB: 'r4-daniel-total' },
+    marketSlugs: { h2h: 'r4-ando-daniel-h2h', line: 'r4-ando-daniel-line', totalA: 'r4-ando-total', totalB: 'r4-daniel-total' },
   },
   {
     id: 'r4-brad-parker',
@@ -163,7 +163,7 @@ export const MATCHES: MatchDefinition[] = [
     favourite: 'a',
     line: 2.5,
     slugPrefix: 'r4-brad-parker',
-    marketSlugs: { h2h: 'r4-brad-parker-h2h', line: 'r4-brad-parker-line', margin: 'r4-brad-parker-margin', totalA: 'r4-brad-total', totalB: 'r4-parker-total' },
+    marketSlugs: { h2h: 'r4-brad-parker-h2h', line: 'r4-brad-parker-line', totalA: 'r4-brad-total', totalB: 'r4-parker-total' },
   },
   {
     id: 'r4-horny-general',
@@ -176,6 +176,6 @@ export const MATCHES: MatchDefinition[] = [
     favourite: 'b',
     line: 1.5,
     slugPrefix: 'r4-horny-general',
-    marketSlugs: { h2h: 'r4-horny-general-h2h', line: 'r4-horny-general-line', margin: 'r4-horny-general-margin', totalA: 'r4-general-total', totalB: 'r4-horny-total' },
+    marketSlugs: { h2h: 'r4-horny-general-h2h', line: 'r4-horny-general-line', totalA: 'r4-general-total', totalB: 'r4-horny-total' },
   },
 ];

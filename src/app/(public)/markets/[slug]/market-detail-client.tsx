@@ -46,7 +46,6 @@ export function MarketDetailClient({ market }: MarketDetailClientProps) {
           <div className="bg-navy-card border border-white/8 rounded-xl p-5">
             <h1 className="text-xl font-bold text-white mb-3">{market.title}</h1>
             <div className="flex items-center gap-2 flex-wrap mb-4">
-              <StatusBadge status={market.status} />
               <CategoryBadge category={market.category} />
               {market.is_featured && <FeaturedBadge />}
               {market.round_label && <RoundBadge label={market.round_label} />}

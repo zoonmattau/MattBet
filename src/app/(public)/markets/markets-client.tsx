@@ -191,6 +191,7 @@ export function MarketsClient({ markets }: MarketsClientProps) {
                 onRemove={(id) => setBetSlip((prev) => prev.filter((b) => b.selection.id !== id))}
                 onClear={() => setBetSlip([])}
                 onBetPlaced={() => setBetSlip([])}
+                allMarkets={markets}
               />
             </div>
           </div>
@@ -299,7 +300,7 @@ function RoundMatchTab({
                 )}
 
                 <div className="mt-2 text-[10px] text-white/20">
-                  Expand -- line, margin, totals
+                  Expand -- line, totals
                 </div>
               </div>
             </Link>
@@ -582,9 +583,19 @@ function MarketBlock({
 }) {
   const isDisabled = market.status !== 'open';
   const hasGroups = market.selections.some((s) => s.name.startsWith('Group '));
-  const sorted = [...market.selections].sort((a, b) =>
-    hasGroups ? a.sort_order - b.sort_order : Number(a.odds_decimal) - Number(b.odds_decimal)
-  );
+  const isOverUnder = market.selections.some((s) => s.name.toLowerCase().startsWith('over') || s.name.toLowerCase().startsWith('under'));
+  const sorted = [...market.selections].sort((a, b) => {
+    if (hasGroups) return a.sort_order - b.sort_order;
+    if (isOverUnder) {
+      // Over always first
+      const aIsOver = a.name.toLowerCase().startsWith('over') || a.name.toLowerCase().startsWith('yes');
+      const bIsOver = b.name.toLowerCase().startsWith('over') || b.name.toLowerCase().startsWith('yes');
+      if (aIsOver && !bIsOver) return -1;
+      if (!aIsOver && bIsOver) return 1;
+      return a.sort_order - b.sort_order;
+    }
+    return Number(a.odds_decimal) - Number(b.odds_decimal);
+  });
   const needsExpand = sorted.length > COLLAPSE_THRESHOLD;
   const visible = needsExpand && !expanded ? sorted.slice(0, COLLAPSE_THRESHOLD) : sorted;
 
@@ -595,9 +606,6 @@ function MarketBlock({
           <span className="text-[13px] text-white/80 font-medium">{market.title}</span>
           {MARKET_SUBTITLES[market.slug] && (
             <span className="text-[11px] text-white/35 ml-2">{MARKET_SUBTITLES[market.slug]}</span>
-          )}
-          {market.status !== 'open' && (
-            <span className={`text-[10px] font-medium uppercase status-${market.status} ml-2`}>{market.status}</span>
           )}
         </div>
       </div>

@@ -165,7 +165,7 @@ export function MatchesClient({ h2hMarkets, stablefordMarkets }: MatchesClientPr
 
                   {/* Footer hint */}
                   <div className="mt-2 text-[10px] text-white/20">
-                    Expand -- line, margin, totals
+                    Expand -- line, totals
                   </div>
                 </div>
               </Link>
