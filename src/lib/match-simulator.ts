@@ -468,10 +468,22 @@ export function calculateSGMOdds(
   const rawOdds = 1 / combinedProbability;
   let adjustedOdds = rawOdds / HOUSE_EDGE_SGM;
 
-  // SGM should never pay worse than the hardest individual leg
+  // SGM should pay at least the hardest individual leg
   const bestSingleOdds = Math.max(...items.map((i) => Number(i.selection.odds_decimal)));
   if (adjustedOdds < bestSingleOdds) {
-    adjustedOdds = bestSingleOdds;
+    // Check if the sim probability equals the hardest leg's probability
+    // (meaning one leg implies the other -- no boost needed)
+    const hardestLegProb = 1 / bestSingleOdds;
+    const simProb = combinedProbability;
+    const ratio = simProb / hardestLegProb;
+
+    if (ratio > 0.95) {
+      // Nearly identical probability -- one implies the other, pay hardest leg only
+      adjustedOdds = bestSingleOdds;
+    } else {
+      // Genuinely harder combo, boost proportionally
+      adjustedOdds = bestSingleOdds * (1 + (1 - ratio) * 0.5);
+    }
   }
 
   return {

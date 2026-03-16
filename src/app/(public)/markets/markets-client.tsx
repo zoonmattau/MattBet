@@ -7,6 +7,7 @@ import { BetSlip } from '@/components/bet-slip';
 import { MATCHES } from '@/lib/matches';
 import Link from 'next/link';
 import { H2HBuilder } from '@/components/h2h-builder';
+import { useBetSlip } from '@/lib/betslip-store';
 
 const PLAYER_TEAMS: Record<string, string> = {
   'Hugo': 'Group 1', 'Bails': 'Group 1', 'Brad': 'Group 1', 'Watto': 'Group 1',
@@ -49,19 +50,14 @@ interface MarketsClientProps {
 }
 
 export function MarketsClient({ markets }: MarketsClientProps) {
-  const [betSlip, setBetSlip] = useState<BetSlipItem[]>([]);
+  const { items: betSlip, addItem, removeItem, clear } = useBetSlip();
   const searchParams = useSearchParams();
   const initialTab = searchParams.get('tab') || 'outrights';
   const [activeTab, setActiveTab] = useState(initialTab);
   const [expandedMarkets, setExpandedMarkets] = useState<Record<string, boolean>>({});
 
   const handleSelectBet = (market: Market, selection: MarketSelection) => {
-    setBetSlip((prev) => {
-      const existing = prev.find((item) => item.selection.id === selection.id);
-      if (existing) return prev.filter((item) => item.selection.id !== selection.id);
-      const filtered = prev.filter((item) => item.market.id !== market.id);
-      return [...filtered, { market, selection, stake: 0 }];
-    });
+    addItem(market, selection);
   };
 
   const toggleMarket = (id: string) => {
@@ -143,6 +139,19 @@ export function MarketsClient({ markets }: MarketsClientProps) {
         ))}
       </div>
 
+      {/* Bet slip on mobile - top */}
+      {betSlip.length > 0 && (
+        <div className="lg:hidden mb-4">
+          <BetSlip
+            items={betSlip}
+            onRemove={removeItem}
+            onClear={clear}
+            onBetPlaced={clear}
+            allMarkets={markets}
+          />
+        </div>
+      )}
+
       <div className={`grid gap-6 ${betSlip.length > 0 ? 'lg:grid-cols-3' : ''}`}>
         <div className={`${betSlip.length > 0 ? 'lg:col-span-2' : ''} space-y-3`}>
 
@@ -184,13 +193,13 @@ export function MarketsClient({ markets }: MarketsClientProps) {
         </div>
 
         {betSlip.length > 0 && (
-          <div className="lg:col-span-1">
+          <div className="hidden lg:block lg:col-span-1">
             <div className="lg:sticky lg:top-4">
               <BetSlip
                 items={betSlip}
-                onRemove={(id) => setBetSlip((prev) => prev.filter((b) => b.selection.id !== id))}
-                onClear={() => setBetSlip([])}
-                onBetPlaced={() => setBetSlip([])}
+                onRemove={removeItem}
+                onClear={clear}
+                onBetPlaced={clear}
                 allMarkets={markets}
               />
             </div>

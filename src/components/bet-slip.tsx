@@ -140,8 +140,20 @@ export function BetSlip({ items, onRemove, onClear, onBetPlaced, allMarkets }: B
   const [error, setError] = useState<string | null>(null);
   const prevCount = useRef(items.length);
 
-  const multiCalc = items.length >= 2 ? calculateMultiOdds(items, allMarkets) : null;
-  const conflict = multiCalc?.conflict || (items.length >= 2 ? getNonMatchConflict(items) : null);
+  // Multis only allowed across different matches/events (no SGM)
+  const hasSameMatch = (() => {
+    const prefixes = items.map((i) => {
+      const m = i.market.slug.match(/^(r[234]-m\d)/);
+      if (m) return m[1];
+      const r4 = i.market.slug.match(/^(r4-[a-z]+-[a-z]+)/);
+      return r4 ? r4[1] : null;
+    }).filter(Boolean);
+    return new Set(prefixes).size < prefixes.length;
+  })();
+  const multiCalc = items.length >= 2 && !hasSameMatch ? calculateMultiOdds(items, allMarkets) : null;
+  const conflict = hasSameMatch
+    ? 'Same game multis are not available'
+    : multiCalc?.conflict || (items.length >= 2 ? getNonMatchConflict(items) : null);
   const canMulti = items.length >= 2 && !conflict;
 
   useEffect(() => {
@@ -158,18 +170,22 @@ export function BetSlip({ items, onRemove, onClear, onBetPlaced, allMarkets }: B
 
   if (confirmation) {
     return (
-      <div className="bg-navy-card border border-white/[0.08] rounded-lg p-5 text-center">
-        <div className={`font-bold text-base mb-2 ${confirmation.includes('review') ? 'text-gold' : 'text-green-bright'}`}>
-          {confirmation.includes('review') ? 'Bet Submitted for Review' : 'Bet Accepted'}
+      <>
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => { setConfirmation(null); onClear(); }}>
+          <div className="bg-navy-card border border-white/[0.08] rounded-xl p-6 text-center max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <div className={`font-bold text-lg mb-2 ${confirmation.includes('review') ? 'text-gold' : 'text-green-bright'}`}>
+              {confirmation.includes('review') ? 'Bet Submitted for Review' : 'Bet Accepted'}
+            </div>
+            <p className="text-white/50 text-sm mb-5">{confirmation}</p>
+            <button
+              onClick={() => { setConfirmation(null); onClear(); }}
+              className="px-6 py-2.5 rounded-lg bg-green-accent text-white font-medium text-sm hover:bg-green-bright transition-colors"
+            >
+              Done
+            </button>
+          </div>
         </div>
-        <p className="text-white/50 text-sm mb-4">{confirmation}</p>
-        <button
-          onClick={() => { setConfirmation(null); onClear(); }}
-          className="px-5 py-2 rounded-lg bg-green-accent text-white font-medium text-sm hover:bg-green-bright transition-colors"
-        >
-          Done
-        </button>
-      </div>
+      </>
     );
   }
 
@@ -338,7 +354,7 @@ export function BetSlip({ items, onRemove, onClear, onBetPlaced, allMarkets }: B
                   </span>
                 )}
                 <button onClick={() => onRemove(item.selection.id)} className="text-[10px] text-white/20 hover:text-white/40 shrink-0">
-                  remove
+                  x
                 </button>
               </div>
             )}
@@ -346,7 +362,7 @@ export function BetSlip({ items, onRemove, onClear, onBetPlaced, allMarkets }: B
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-white/20">Leg {items.indexOf(item) + 1}</span>
                 <button onClick={() => onRemove(item.selection.id)} className="text-[10px] text-white/20 hover:text-white/40">
-                  remove
+                  x
                 </button>
               </div>
             )}

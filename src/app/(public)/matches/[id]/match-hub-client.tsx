@@ -16,6 +16,7 @@ import { BetSlip } from '@/components/bet-slip';
 import Link from 'next/link';
 import { getMatchSims, getMatchConfig } from '@/lib/match-simulator';
 import { getAlternateLineOdds, getAlternateTotalOdds } from '@/lib/match-simulator-client';
+import { useBetSlip } from '@/lib/betslip-store';
 
 interface MatchHubClientProps {
   match: MatchDefinition;
@@ -25,15 +26,10 @@ interface MatchHubClientProps {
 }
 
 export function MatchHubClient({ match, markets, allH2H, fridayWinner }: MatchHubClientProps) {
-  const [betSlip, setBetSlip] = useState<BetSlipItem[]>([]);
+  const { items: betSlip, addItem, removeItem, clear } = useBetSlip();
 
   const handleSelectBet = (market: Market, selection: MarketSelection) => {
-    setBetSlip((prev) => {
-      const existing = prev.find((item) => item.selection.id === selection.id);
-      if (existing) return prev.filter((item) => item.selection.id !== selection.id);
-      const filtered = prev.filter((item) => item.market.id !== market.id);
-      return [...filtered, { market, selection, stake: 0 }];
-    });
+    addItem(market, selection);
   };
 
   const h2h = markets[match.marketSlugs.h2h];
@@ -149,6 +145,19 @@ export function MatchHubClient({ match, markets, allH2H, fridayWinner }: MatchHu
         </div>
       </div>
 
+      {/* Bet slip on mobile - top */}
+      {betSlip.length > 0 && (
+        <div className="lg:hidden mb-4">
+          <BetSlip
+            items={betSlip}
+            onRemove={removeItem}
+            onClear={clear}
+            onBetPlaced={clear}
+            allMarkets={Object.values(markets)}
+          />
+        </div>
+      )}
+
       <div className={`grid gap-6 ${betSlip.length > 0 ? 'lg:grid-cols-3' : ''}`}>
         <div className={`${betSlip.length > 0 ? 'lg:col-span-2' : ''} space-y-4`}>
           {/* Head to Head */}
@@ -196,13 +205,13 @@ export function MatchHubClient({ match, markets, allH2H, fridayWinner }: MatchHu
           </div>
         </div>
 
-        <div className="lg:col-span-1">
+        <div className="hidden lg:block lg:col-span-1">
           <div className="lg:sticky lg:top-4">
             <BetSlip
               items={betSlip}
-              onRemove={(id) => setBetSlip((prev) => prev.filter((b) => b.selection.id !== id))}
-              onClear={() => setBetSlip([])}
-              onBetPlaced={() => setBetSlip([])}
+              onRemove={removeItem}
+              onClear={clear}
+              onBetPlaced={clear}
               allMarkets={Object.values(markets)}
             />
           </div>
