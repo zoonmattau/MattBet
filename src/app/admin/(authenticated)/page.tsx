@@ -1,5 +1,6 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import { formatCurrency } from '@/lib/exposure';
+import { OddsSuggestions } from '@/components/odds-suggestions';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,9 +9,27 @@ export default async function AdminDashboard() {
 
   const { data: bets } = await supabase.from('bets').select('*');
   const { data: markets } = await supabase.from('markets').select('*');
+  const { data: selections } = await supabase.from('market_selections').select('*');
 
   const allBets = bets || [];
   const allMarkets = markets || [];
+  const allSelections = selections || [];
+
+  // Build markets-with-data for odds suggestions
+  const openMarketsWithData = allMarkets
+    .filter((m) => m.status === 'open')
+    .map((m) => ({
+      id: m.id,
+      title: m.title,
+      slug: m.slug,
+      status: m.status,
+      selections: allSelections
+        .filter((s) => s.market_id === m.id)
+        .map((s) => ({ id: s.id, name: s.name, odds_decimal: Number(s.odds_decimal), sort_order: s.sort_order })),
+      bets: allBets
+        .filter((b) => b.market_id === m.id)
+        .map((b) => ({ selection_id: b.selection_id, stake: Number(b.stake), status: b.status })),
+    }));
 
   const totalBets = allBets.length;
   const pendingBets = allBets.filter((b) => b.status === 'pending');
@@ -69,6 +88,9 @@ export default async function AdminDashboard() {
           </div>
         ))}
       </div>
+
+      {/* Odds Adjustment Suggestions */}
+      <OddsSuggestions markets={openMarketsWithData} />
 
       {/* Recent Bets */}
       <div>

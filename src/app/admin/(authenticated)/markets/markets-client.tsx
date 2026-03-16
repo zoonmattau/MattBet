@@ -152,19 +152,9 @@ function AdminMarketRow({
     router.refresh();
   };
 
-  const saveOdds = async (selId: string) => {
-    const newOdds = parseFloat(editingOdds[selId]);
-    if (!newOdds || newOdds <= 1) return;
-    setSaving(selId);
-    const supabase = createClient();
-    await supabase.from('market_selections').update({ odds_decimal: newOdds }).eq('id', selId);
-    setEditingOdds((prev) => { const next = { ...prev }; delete next[selId]; return next; });
-    setSaving(null);
-    router.refresh();
-  };
 
   return (
-    <div className="bg-navy-card border border-white/8 rounded-xl overflow-hidden">
+    <div className="bg-navy-card border border-white/8 rounded-xl">
       {/* Header - click to expand */}
       <button
         onClick={onToggle}
@@ -174,6 +164,9 @@ function AdminMarketRow({
           <div className="text-white font-semibold text-sm">{market.title}</div>
           <div className="flex items-center gap-2 mt-1">
             <StatusBadge status={market.status} />
+            {market.line_value !== null && (
+              <span className="text-[10px] text-gold font-bold">Line: {market.line_value}</span>
+            )}
             <span className="text-[10px] text-white/30">
               {market.selections.length} sel -- {overround.toFixed(1)}%
             </span>
@@ -194,7 +187,7 @@ function AdminMarketRow({
       {isExpanded && (
         <div className="border-t border-white/5">
           {/* Status controls */}
-          <div className="px-4 py-2 border-b border-white/5 flex items-center gap-2">
+          <div className="px-4 py-2 border-b border-white/5 flex flex-wrap items-center gap-2">
             <span className="text-[10px] text-white/30 mr-1">Status:</span>
             {['open', 'suspended', 'settled', 'void'].map((s) => (
               <button
@@ -210,9 +203,19 @@ function AdminMarketRow({
                 {s}
               </button>
             ))}
+            <Link
+              href={`/admin/markets/${market.id}`}
+              className="ml-auto text-[10px] text-green-bright hover:text-green-bright/80"
+            >
+              Full View
+            </Link>
+          </div>
+
+          {/* Line & Title editors */}
+          <div className="px-4 py-2 border-b border-white/5 flex flex-wrap items-center gap-3">
             {/* Line value editor */}
             {market.line_value !== null && (
-              <div className="flex items-center gap-1 ml-2">
+              <div className="flex items-center gap-1">
                 <span className="text-[10px] text-white/30">Line:</span>
                 <input
                   type="number"
@@ -256,13 +259,13 @@ function AdminMarketRow({
             )}
 
             {/* Title editor */}
-            <div className="flex items-center gap-1 ml-2">
-              <span className="text-[10px] text-white/30">Title:</span>
+            <div className="flex items-center gap-1 flex-1 min-w-0">
+              <span className="text-[10px] text-white/30 shrink-0">Title:</span>
               <input
                 type="text"
                 value={editingTitle ?? market.title}
                 onChange={(e) => setEditingTitle(e.target.value)}
-                className="w-48 px-1 py-0.5 rounded bg-white/5 border border-white/10 text-white text-xs focus:outline-none focus:border-green-bright/50"
+                className="flex-1 min-w-0 px-1 py-0.5 rounded bg-white/5 border border-white/10 text-white text-xs focus:outline-none focus:border-green-bright/50"
               />
               {editingTitle !== null && editingTitle !== market.title && (
                 <button
@@ -272,25 +275,17 @@ function AdminMarketRow({
                     setEditingTitle(null);
                     router.refresh();
                   }}
-                  className="text-[10px] px-1.5 py-0.5 rounded bg-green-accent text-white"
+                  className="text-[10px] px-1.5 py-0.5 rounded bg-green-accent text-white shrink-0"
                 >
                   save
                 </button>
               )}
             </div>
-
-            <Link
-              href={`/admin/markets/${market.id}`}
-              className="ml-auto text-[10px] text-green-bright hover:text-green-bright/80"
-            >
-              Full View
-            </Link>
           </div>
 
           {/* Selections with inline odds editing */}
           <div className="divide-y divide-white/3">
             {sorted.map((sel) => {
-              const isEditing = editingOdds[sel.id] !== undefined;
               const currentVal = editingOdds[sel.id] ?? Number(sel.odds_decimal).toFixed(2);
               const selBets = marketBets.filter((b) => b.selection_id === sel.id && b.status !== 'void');
               const totalStaked = selBets.reduce((s, b) => s + Number(b.stake), 0);
@@ -313,16 +308,7 @@ function AdminMarketRow({
                       {netResult >= 0 ? '+' : ''}{formatCurrency(netResult)} if wins
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {isEditing && (
-                      <button
-                        onClick={() => saveOdds(sel.id)}
-                        disabled={saving === sel.id}
-                        className="text-[10px] px-2 py-1 rounded bg-green-accent text-white hover:bg-green-bright transition-colors"
-                      >
-                        {saving === sel.id ? '...' : 'Save'}
-                      </button>
-                    )}
+                  <div className="shrink-0">
                     <input
                       type="number"
                       step="0.01"
@@ -336,9 +322,32 @@ function AdminMarketRow({
             })}
           </div>
 
-          {/* Overround summary */}
-          <div className="px-4 py-2 border-t border-white/5 text-[10px] text-white/25">
-            Margin: {overround.toFixed(1)}% -- {market.selections.length} selections
+          {/* Save All + Overround summary */}
+          <div className="px-4 py-2 border-t border-white/5 flex items-center justify-between">
+            <div className="text-[10px] text-white/25">
+              Margin: {overround.toFixed(1)}% -- {market.selections.length} selections
+            </div>
+            {Object.keys(editingOdds).length > 0 && (
+              <button
+                onClick={async () => {
+                  setSaving('all');
+                  const supabase = createClient();
+                  for (const [selId, val] of Object.entries(editingOdds)) {
+                    const newOdds = parseFloat(val);
+                    if (newOdds && newOdds > 1) {
+                      await supabase.from('market_selections').update({ odds_decimal: newOdds }).eq('id', selId);
+                    }
+                  }
+                  setEditingOdds({});
+                  setSaving(null);
+                  router.refresh();
+                }}
+                disabled={saving === 'all'}
+                className="px-3 py-1.5 rounded-lg bg-green-accent text-white text-xs font-bold hover:bg-green-bright transition-colors disabled:opacity-50"
+              >
+                {saving === 'all' ? 'Saving...' : `Save All (${Object.keys(editingOdds).length})`}
+              </button>
+            )}
           </div>
         </div>
       )}
