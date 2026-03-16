@@ -628,7 +628,11 @@ function MarketBlock({
               <span className={`text-[13px] ${isSelected ? 'text-white font-medium' : 'text-white/60'}`}>{sel.name}</span>
               {TEAM_MEMBERS[sel.name] && <span className="text-[11px] text-white/25 ml-1.5">{TEAM_MEMBERS[sel.name]}</span>}
             </div>
-            <span className={`text-[13px] font-bold font-mono shrink-0 ml-3 ${isSelected ? 'text-green-bright' : 'text-green-bright/80'}`}>
+            <span className={`text-[13px] font-bold font-mono shrink-0 ml-3 px-2.5 py-1 rounded-md border transition-colors ${
+              isSelected
+                ? 'text-green-bright bg-green-bright/15 border-green-bright/30'
+                : 'text-green-bright/80 bg-odds-bg/50 border-green-bright/10'
+            }`}>
               ${Number(sel.odds_decimal).toFixed(2)}
             </span>
           </button>

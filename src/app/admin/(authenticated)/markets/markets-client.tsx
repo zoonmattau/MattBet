@@ -230,10 +230,21 @@ function AdminMarketRow({
                       const newLine = parseFloat(editingLine);
                       const supabase = createClient();
                       await supabase.from('markets').update({ line_value: newLine }).eq('id', market.id);
-                      // Update selection names to match new line
+
+                      // Check which selections have bets
+                      const { data: betsOnMarket } = await supabase
+                        .from('bets')
+                        .select('selection_id')
+                        .eq('market_id', market.id)
+                        .neq('status', 'void');
+                      const selIdsWithBets = new Set((betsOnMarket || []).map((b) => b.selection_id));
+
+                      // Create new selections at the new line, keep old ones with bets
                       for (const sel of market.selections) {
                         const name = sel.name.toLowerCase();
-                        let newName = sel.name;
+                        let newName: string | null = null;
+                        let sortOrder = sel.sort_order;
+
                         if (name.startsWith('over')) newName = `Over ${newLine}`;
                         else if (name.startsWith('under')) newName = `Under ${newLine}`;
                         else if (name.includes('+')) {
@@ -243,7 +254,19 @@ function AdminMarketRow({
                           const prefix = sel.name.split(/\s*-\s*\d/)[0].trim();
                           newName = `${prefix} -${newLine}`;
                         }
-                        if (newName !== sel.name) {
+
+                        if (!newName || newName === sel.name) continue;
+
+                        if (selIdsWithBets.has(sel.id)) {
+                          // Has bets: keep old selection, create new one at new line
+                          await supabase.from('market_selections').insert({
+                            market_id: market.id,
+                            name: newName,
+                            odds_decimal: Number(sel.odds_decimal),
+                            sort_order: sortOrder,
+                          });
+                        } else {
+                          // No bets: just rename
                           await supabase.from('market_selections').update({ name: newName }).eq('id', sel.id);
                         }
                       }
