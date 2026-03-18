@@ -1,5 +1,5 @@
 import { createServerSupabase } from '@/lib/supabase/server';
-import { MATCHES } from '@/lib/matches';
+import { getMatches } from '@/lib/matches-server';
 import { notFound } from 'next/navigation';
 import { MatchHubClient } from './match-hub-client';
 import { Market, MarketSelection } from '@/lib/types';
@@ -8,7 +8,8 @@ export const dynamic = 'force-dynamic';
 
 export default async function MatchHubPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const match = MATCHES.find((m) => m.id === id);
+  const matches = await getMatches();
+  const match = matches.find((m) => m.id === id);
   if (!match) notFound();
 
   const supabase = await createServerSupabase();
@@ -26,7 +27,7 @@ export default async function MatchHubPage({ params }: { params: Promise<{ id: s
   });
 
   // Fetch all H2H markets for the scroll bar odds
-  const allH2HSlugs = MATCHES.map((m) => m.marketSlugs.h2h);
+  const allH2HSlugs = matches.map((m) => m.marketSlugs.h2h);
   const { data: allH2H } = await supabase
     .from('markets')
     .select('*, selections:market_selections(*)')
@@ -44,5 +45,5 @@ export default async function MatchHubPage({ params }: { params: Promise<{ id: s
     .eq('slug', 'friday-stableford-winner')
     .single();
 
-  return <MatchHubClient match={match} markets={marketMap} allH2H={h2hMap} fridayWinner={fridayWinner as (Market & { selections: MarketSelection[] }) | null} />;
+  return <MatchHubClient matches={matches} match={match} markets={marketMap} allH2H={h2hMap} fridayWinner={fridayWinner as (Market & { selections: MarketSelection[] }) | null} />;
 }

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Market, MarketSelection, BetSlipItem } from '@/lib/types';
 import { BetSlip } from '@/components/bet-slip';
-import { MATCHES } from '@/lib/matches';
+import { MatchDefinition } from '@/lib/matches';
 import Link from 'next/link';
 import { H2HBuilder } from '@/components/h2h-builder';
 import { useBetSlip } from '@/lib/betslip-store';
@@ -46,10 +46,11 @@ const TABS = [
 const COLLAPSE_THRESHOLD = 4;
 
 interface MarketsClientProps {
+  matches: MatchDefinition[];
   markets: (Market & { selections: MarketSelection[] })[];
 }
 
-export function MarketsClient({ markets }: MarketsClientProps) {
+export function MarketsClient({ matches, markets }: MarketsClientProps) {
   const { items: betSlip, addItem, removeItem, clear } = useBetSlip();
   const searchParams = useSearchParams();
   const initialTab = searchParams.get('tab') || 'outrights';
@@ -65,8 +66,8 @@ export function MarketsClient({ markets }: MarketsClientProps) {
   };
 
   // H2H market slugs for matches
-  const allMatchSlugs = MATCHES.flatMap((m) => Object.values(m.marketSlugs));
-  const h2hSlugs = MATCHES.map((m) => m.marketSlugs.h2h);
+  const allMatchSlugs = matches.flatMap((m) => Object.values(m.marketSlugs));
+  const h2hSlugs = matches.map((m) => m.marketSlugs.h2h);
 
   // Outrights: non-match, non-stableford, non-score-totals-that-are-round-specific
   const outrightCategories = ['outrights', 'novelty', 'trip_specials', 'score_totals'];
@@ -181,6 +182,7 @@ export function MarketsClient({ markets }: MarketsClientProps) {
           {/* R2, R3, R4 TABS */}
           {['r2', 'r3', 'r4'].includes(activeTab) && (
             <RoundMatchTab
+              matches={matches}
               roundNum={parseInt(activeTab.replace('r', ''))}
               h2hMarketMap={h2hMarketMap}
               allMarkets={markets}
@@ -211,6 +213,7 @@ export function MarketsClient({ markets }: MarketsClientProps) {
 }
 
 function RoundMatchTab({
+  matches,
   roundNum,
   h2hMarketMap,
   allMarkets,
@@ -219,6 +222,7 @@ function RoundMatchTab({
   betSlip,
   onSelectBet,
 }: {
+  matches: MatchDefinition[];
   roundNum: number;
   h2hMarketMap: Record<string, Market & { selections: MarketSelection[] }>;
   allMarkets: (Market & { selections: MarketSelection[] })[];
@@ -236,7 +240,7 @@ function RoundMatchTab({
     4: '1v1 Match Play -- Barnbougle Dunes, 8:00am',
   };
 
-  const roundMatches = MATCHES.filter((m) => m.round === roundNum);
+  const roundMatches = matches.filter((m) => m.round === roundNum);
 
   // All match slugs for this round (to exclude from extras)
   const matchSlugs = roundMatches.flatMap((m) => Object.values(m.marketSlugs));

@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 
 const ADMIN_NAV = [
   { href: '/admin', label: 'Dashboard' },
+  { href: '/admin/pairings', label: 'Pairings' },
   { href: '/admin/markets', label: 'Markets' },
   { href: '/admin/bets', label: 'Bets' },
   { href: '/admin/exposure', label: 'Exposure' },

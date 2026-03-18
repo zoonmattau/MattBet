@@ -24,8 +24,8 @@ const simCache = new Map<string, SimResult[]>();
 
 // Handicaps for all players
 const HC: Record<string, number> = {
-  lewis: 9, jacob: 9, finn: 10, bails: 14, jackson: 14,
-  brad: 15, ando: 15, hugo: 15, mcnaughton: 18, daniel: 20, watto: 21, parker: 22,
+  lewis: 8.9, jacob: 9, finn: 10, brad: 8.7, bails: 14.3, jackson: 14.6,
+  hugo: 15.1, ando: 16.3, mcnaughton: 21.1, watto: 21.2, daniel: 22, parker: 22,
 };
 
 /**
@@ -146,7 +146,10 @@ interface MatchConfig {
   numHoles: number;
 }
 
-const MATCH_CONFIGS: MatchConfig[] = [
+// Dynamic config overrides (registered at runtime from DB pairings)
+const dynamicConfigs = new Map<string, MatchConfig>();
+
+const DEFAULT_MATCH_CONFIGS: MatchConfig[] = [
   // R2 - 2v2 Match Play at Lost Farm (18 holes)
   { prefix: 'r2-m1', teamANames: ['hugo', 'bails'], teamBNames: ['jackson', 'finn'], hcA: [HC.hugo, HC.bails], hcB: [HC.jackson, HC.finn], numHoles: 18 },
   { prefix: 'r2-m2', teamANames: ['lewis', 'jacob'], teamBNames: ['ando', 'mcnaughton'], hcA: [HC.lewis, HC.jacob], hcB: [HC.ando, HC.mcnaughton], numHoles: 18 },
@@ -166,6 +169,66 @@ const MATCH_CONFIGS: MatchConfig[] = [
   { prefix: 'r4-horny-general', teamANames: ['watto'], teamBNames: ['mcnaughton'], hcA: HC.watto, hcB: HC.mcnaughton, numHoles: 18 },
 ];
 
+// Resolve config: dynamic overrides first, then defaults
+function findConfig(prefix: string): MatchConfig | undefined {
+  return dynamicConfigs.get(prefix) || DEFAULT_MATCH_CONFIGS.find((c) => c.prefix === prefix);
+}
+
+function getAllConfigs(): MatchConfig[] {
+  const all = new Map<string, MatchConfig>();
+  for (const c of DEFAULT_MATCH_CONFIGS) all.set(c.prefix, c);
+  for (const [k, v] of dynamicConfigs) all.set(k, v);
+  return Array.from(all.values());
+}
+
+/**
+ * Parse a team name like "Hugo and Bails" or "Jackson" into lowercase name(s) and HC(s).
+ */
+function parseTeam(teamName: string): { names: string[]; hcs: number[] } {
+  const parts = teamName.split(' and ').map((s) => s.trim());
+  const names: string[] = [];
+  const hcs: number[] = [];
+  for (const part of parts) {
+    const lower = part.toLowerCase();
+    names.push(lower);
+    hcs.push(HC[lower] ?? 15); // default to 15 if unknown
+  }
+  return { names, hcs };
+}
+
+/**
+ * Register a dynamic match config from a MatchDefinition.
+ * Clears cached sims for this prefix so they'll be re-run with the new handicaps.
+ */
+export function registerMatchFromDefinition(match: {
+  slugPrefix: string;
+  teamA: string;
+  teamB: string;
+  round: number;
+}): MatchConfig {
+  const a = parseTeam(match.teamA);
+  const b = parseTeam(match.teamB);
+  const numHoles = match.round === 3 ? 14 : 18;
+
+  const config: MatchConfig = {
+    prefix: match.slugPrefix,
+    teamANames: a.names,
+    teamBNames: b.names,
+    hcA: a.hcs.length === 1 ? a.hcs[0] : a.hcs,
+    hcB: b.hcs.length === 1 ? b.hcs[0] : b.hcs,
+    numHoles,
+  };
+
+  // Only update if actually different from what's cached
+  const existing = dynamicConfigs.get(match.slugPrefix);
+  if (!existing || JSON.stringify(existing) !== JSON.stringify(config)) {
+    dynamicConfigs.set(match.slugPrefix, config);
+    simCache.delete(match.slugPrefix); // clear stale sims
+  }
+
+  return config;
+}
+
 function getMatchPrefix(slug: string): string | null {
   const m = slug.match(/^(r[234]-m\d)/);
   if (m) return m[1];
@@ -175,7 +238,7 @@ function getMatchPrefix(slug: string): string | null {
 
 function getSimsForMatch(prefix: string): SimResult[] {
   if (!simCache.has(prefix)) {
-    const config = MATCH_CONFIGS.find((c) => c.prefix === prefix);
+    const config = findConfig(prefix);
     if (!config) return [];
     simCache.set(prefix, simulateMatch(config.hcA, config.hcB, config.numHoles));
   }
@@ -259,7 +322,7 @@ export function generateMatchOdds(prefix: string): {
   totalA: { over: number; under: number; value: number };
   totalB: { over: number; under: number; value: number };
 } | null {
-  const config = MATCH_CONFIGS.find((c) => c.prefix === prefix);
+  const config = findConfig(prefix);
   if (!config) return null;
 
   const sims = getSimsForMatch(prefix);
@@ -384,7 +447,7 @@ export function generateMatchOdds(prefix: string): {
 export function generateAllMatchOdds(): Record<string, ReturnType<typeof generateMatchOdds>> {
   simCache.clear(); // fresh sims each run
   const results: Record<string, ReturnType<typeof generateMatchOdds>> = {};
-  for (const config of MATCH_CONFIGS) {
+  for (const config of getAllConfigs()) {
     results[config.prefix] = generateMatchOdds(config.prefix);
   }
   return results;
@@ -398,7 +461,7 @@ export function getMatchSims(prefix: string): SimResult[] {
 }
 
 export function getMatchConfig(prefix: string) {
-  return MATCH_CONFIGS.find((c) => c.prefix === prefix) || null;
+  return findConfig(prefix) || null;
 }
 
 export function calculateSGMOdds(
@@ -424,7 +487,7 @@ export function calculateSGMOdds(
   let isCorrelated = false;
 
   for (const [prefix, matchItems] of byPrefix) {
-    const config = MATCH_CONFIGS.find((c) => c.prefix === prefix);
+    const config = findConfig(prefix);
     if (!config) continue;
 
     if (matchItems.length === 1) {

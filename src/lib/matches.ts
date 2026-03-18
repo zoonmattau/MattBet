@@ -18,7 +18,8 @@ export interface MatchDefinition {
   };
 }
 
-export const MATCHES: MatchDefinition[] = [
+// Default matches - can be overridden via admin pairings page
+export const DEFAULT_MATCHES: MatchDefinition[] = [
   // Round 2
   {
     id: 'r2-m1',
@@ -179,3 +180,32 @@ export const MATCHES: MatchDefinition[] = [
     marketSlugs: { h2h: 'r4-horny-general-h2h', line: 'r4-horny-general-line', totalA: 'r4-general-total', totalB: 'r4-horny-total' },
   },
 ];
+
+// Re-export as MATCHES for backward compatibility (static default)
+export const MATCHES = DEFAULT_MATCHES;
+
+// Pairing override shape stored in admin_settings
+export interface PairingOverride {
+  teamA?: string;
+  teamB?: string;
+  favourite?: 'a' | 'b' | 'even';
+  line?: number;
+}
+
+export type PairingOverrides = Record<string, PairingOverride>;
+
+// Merge overrides from DB onto default matches
+export function applyPairingOverrides(overrides: PairingOverrides): MatchDefinition[] {
+  return DEFAULT_MATCHES.map((m) => {
+    const o = overrides[m.id];
+    if (!o) return m;
+    return {
+      ...m,
+      teamA: o.teamA ?? m.teamA,
+      teamB: o.teamB ?? m.teamB,
+      favourite: o.favourite ?? m.favourite,
+      line: o.line ?? m.line,
+    };
+  });
+}
+

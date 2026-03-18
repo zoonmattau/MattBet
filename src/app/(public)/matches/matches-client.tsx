@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Market, MarketSelection } from '@/lib/types';
-import { MATCHES } from '@/lib/matches';
+import { MatchDefinition } from '@/lib/matches';
 import { ROUNDS } from '@/lib/constants';
 import Link from 'next/link';
 
@@ -18,6 +18,7 @@ function getTeamName(label: string): string {
 }
 
 interface MatchesClientProps {
+  matches: MatchDefinition[];
   h2hMarkets: Record<string, Market & { selections: MarketSelection[] }>;
   stablefordMarkets: (Market & { selections: MarketSelection[] })[];
 }
@@ -29,11 +30,11 @@ const TABS = [
   { round: 4, label: 'R4 Sunday', sub: '1v1 Match Play -- Barnbougle Dunes' },
 ];
 
-export function MatchesClient({ h2hMarkets, stablefordMarkets }: MatchesClientProps) {
+export function MatchesClient({ matches, h2hMarkets, stablefordMarkets }: MatchesClientProps) {
   const [activeRound, setActiveRound] = useState(2);
 
   const activeTab = TABS.find((t) => t.round === activeRound)!;
-  const roundMatches = MATCHES.filter((m) => m.round === activeRound);
+  const roundMatches = matches.filter((m) => m.round === activeRound);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">

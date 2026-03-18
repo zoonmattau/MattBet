@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { Market, MarketSelection, BetSlipItem } from '@/lib/types';
-import { MatchDefinition, MATCHES } from '@/lib/matches';
+import { MatchDefinition } from '@/lib/matches';
 
 const PLAYER_TEAMS: Record<string, string> = {
   'Hugo': 'Grp 1', 'Bails': 'Grp 1', 'Brad': 'Grp 1', 'Watto': 'Grp 1',
@@ -14,18 +14,19 @@ function getTeam(name: string): string {
 }
 import { BetSlip } from '@/components/bet-slip';
 import Link from 'next/link';
-import { getMatchSims, getMatchConfig } from '@/lib/match-simulator';
+import { getMatchSims, getMatchConfig, registerMatchFromDefinition } from '@/lib/match-simulator';
 import { getAlternateLineOdds, getAlternateTotalOdds } from '@/lib/match-simulator-client';
 import { useBetSlip } from '@/lib/betslip-store';
 
 interface MatchHubClientProps {
+  matches: MatchDefinition[];
   match: MatchDefinition;
   markets: Record<string, Market & { selections: MarketSelection[] }>;
   allH2H: Record<string, Market & { selections: MarketSelection[] }>;
   fridayWinner: (Market & { selections: MarketSelection[] }) | null;
 }
 
-export function MatchHubClient({ match, markets, allH2H, fridayWinner }: MatchHubClientProps) {
+export function MatchHubClient({ matches, match, markets, allH2H, fridayWinner }: MatchHubClientProps) {
   const { items: betSlip, addItem, removeItem, clear } = useBetSlip();
 
   const handleSelectBet = (market: Market, selection: MarketSelection) => {
@@ -37,11 +38,11 @@ export function MatchHubClient({ match, markets, allH2H, fridayWinner }: MatchHu
   const totalA = markets[match.marketSlugs.totalA];
   const totalB = markets[match.marketSlugs.totalB];
 
-  // Generate sims ONCE and share across all components
-  const sharedSims = useClientSims(match.slugPrefix);
+  // Register dynamic config and generate sims ONCE
+  const sharedSims = useClientSims(match);
 
   const [activeRound, setActiveRound] = useState(match.round);
-  const roundMatches = MATCHES.filter((m) => m.round === activeRound);
+  const roundMatches = matches.filter((m) => m.round === activeRound);
   const allRounds = [
     { num: 1, label: 'Friday' },
     { num: 2, label: 'Sat AM' },
@@ -269,16 +270,18 @@ function MatchBarOdds({ h2hMarket }: { h2hMarket?: Market & { selections: Market
   );
 }
 
-function useClientSims(slugPrefix: string) {
+function useClientSims(match: MatchDefinition) {
   const [sims, setSims] = useState<import('@/lib/match-simulator').SimResult[]>([]);
   const hasRun = useRef(false);
 
   useEffect(() => {
     if (!hasRun.current) {
       hasRun.current = true;
-      setSims(getMatchSims(slugPrefix));
+      // Register dynamic config so sims use the current pairings/handicaps
+      registerMatchFromDefinition(match);
+      setSims(getMatchSims(match.slugPrefix));
     }
-  }, [slugPrefix]);
+  }, [match]);
 
   return sims;
 }
@@ -516,7 +519,10 @@ function OldAlternateMarkets({ match }: { match: MatchDefinition }) {
   const [altTotalB, setAltTotalB] = useState(7.5);
   const [expanded, setExpanded] = useState(false);
 
-  const sims = useMemo(() => getMatchSims(match.slugPrefix), [match.slugPrefix]);
+  const sims = useMemo(() => {
+    registerMatchFromDefinition(match);
+    return getMatchSims(match.slugPrefix);
+  }, [match]);
   const config = useMemo(() => getMatchConfig(match.slugPrefix), [match.slugPrefix]);
 
   if (sims.length === 0 || !config) return null;

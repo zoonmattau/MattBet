@@ -1,5 +1,5 @@
 import { createServerSupabase } from '@/lib/supabase/server';
-import { MATCHES } from '@/lib/matches';
+import { getMatches } from '@/lib/matches-server';
 import { Market, MarketSelection } from '@/lib/types';
 import { MatchesClient } from './matches-client';
 
@@ -7,8 +7,9 @@ export const dynamic = 'force-dynamic';
 
 export default async function MatchesPage() {
   const supabase = await createServerSupabase();
+  const matches = await getMatches();
 
-  const h2hSlugs = MATCHES.map((m) => m.marketSlugs.h2h);
+  const h2hSlugs = matches.map((m) => m.marketSlugs.h2h);
   const { data: markets } = await supabase
     .from('markets')
     .select('*, selections:market_selections(*)')
@@ -27,6 +28,7 @@ export default async function MatchesPage() {
 
   return (
     <MatchesClient
+      matches={matches}
       h2hMarkets={marketMap}
       stablefordMarkets={(stablefordMarkets as (Market & { selections: MarketSelection[] })[]) || []}
     />
