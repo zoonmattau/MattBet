@@ -143,7 +143,18 @@ function AdminMarketRow({
   const [editingLine, setEditingLine] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState<string | null>(null);
 
-  const overround = market.selections.reduce((s, sel) => s + 1 / Number(sel.odds_decimal), 0) * 100;
+  // Live overround: uses editing values when present
+  const getLiveOdds = (sel: MarketSelection) => {
+    const editing = editingOdds[sel.id];
+    if (editing !== undefined) {
+      const parsed = parseFloat(editing);
+      return parsed > 0 ? parsed : Number(sel.odds_decimal);
+    }
+    return Number(sel.odds_decimal);
+  };
+  const overround = market.selections.reduce((s, sel) => s + 1 / getLiveOdds(sel), 0) * 100;
+  const savedOverround = market.selections.reduce((s, sel) => s + 1 / Number(sel.odds_decimal), 0) * 100;
+  const overroundChanged = Math.abs(overround - savedOverround) > 0.05;
   const sorted = [...market.selections].sort((a, b) => Number(a.odds_decimal) - Number(b.odds_decimal));
 
   const handleStatusChange = async (status: string) => {
@@ -167,8 +178,9 @@ function AdminMarketRow({
             {market.line_value !== null && (
               <span className="text-[10px] text-gold font-bold">Line: {market.line_value}</span>
             )}
-            <span className="text-[10px] text-white/30">
+            <span className={`text-[10px] ${overroundChanged ? 'text-gold font-bold' : 'text-white/30'}`}>
               {market.selections.length} sel -- {overround.toFixed(1)}%
+              {overroundChanged && <span className="text-white/30 font-normal"> (was {savedOverround.toFixed(1)}%)</span>}
             </span>
           </div>
         </div>
@@ -320,7 +332,18 @@ function AdminMarketRow({
                   <div className="flex-1 min-w-0">
                     <div className="text-sm text-white/70">{sel.name}</div>
                     <div className="text-[10px] text-white/25">
-                      <span className={totalStaked === 0 ? 'text-white/20' : ''}>{impliedProbability(Number(sel.odds_decimal)).toFixed(1)}%</span>
+                      {(() => {
+                        const liveOdds = getLiveOdds(sel);
+                        const savedOdds = Number(sel.odds_decimal);
+                        const liveProb = impliedProbability(liveOdds);
+                        const changed = editingOdds[sel.id] !== undefined && Math.abs(liveOdds - savedOdds) > 0.005;
+                        return (
+                          <span className={changed ? 'text-gold' : totalStaked === 0 ? 'text-white/20' : ''}>
+                            {liveProb.toFixed(1)}%
+                            {changed && <span className="text-white/20"> (was {impliedProbability(savedOdds).toFixed(1)}%)</span>}
+                          </span>
+                        );
+                      })()}
                       {totalStaked > 0 && (
                         <span className="ml-2">
                           {selBets.length} bet{selBets.length !== 1 ? 's' : ''} -- ${totalStaked.toFixed(0)} staked
@@ -347,8 +370,10 @@ function AdminMarketRow({
 
           {/* Save All + Overround summary */}
           <div className="px-4 py-2 border-t border-white/5 flex items-center justify-between">
-            <div className="text-[10px] text-white/25">
-              Margin: {overround.toFixed(1)}% -- {market.selections.length} selections
+            <div className={`text-[10px] ${overroundChanged ? 'text-gold font-bold' : 'text-white/25'}`}>
+              Margin: {overround.toFixed(1)}%
+              {overroundChanged && <span className="text-white/25 font-normal"> (was {savedOverround.toFixed(1)}%)</span>}
+              <span className="text-white/25 font-normal"> -- {market.selections.length} selections</span>
             </div>
             {Object.keys(editingOdds).length > 0 && (
               <button
