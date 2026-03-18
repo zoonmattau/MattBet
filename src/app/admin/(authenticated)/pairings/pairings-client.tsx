@@ -23,6 +23,9 @@ export function PairingsClient() {
   const [generatingOdds, setGeneratingOdds] = useState(false);
   const [oddsGenerated, setOddsGenerated] = useState(false);
   const [oddsResults, setOddsResults] = useState<{ match: string; updates: string[] }[] | null>(null);
+  const [recalcingPoints, setRecalcingPoints] = useState(false);
+  const [pointsRecalced, setPointsRecalced] = useState(false);
+  const [pointsResults, setPointsResults] = useState<{ market: string; line: number; overOdds: number; underOdds: number }[] | null>(null);
 
   useEffect(() => {
     fetch('/api/admin/pairings')
@@ -139,6 +142,50 @@ export function PairingsClient() {
                 {r.updates.map((u, j) => (
                   <div key={j} className="text-[11px] text-white/40">{u}</div>
                 ))}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Recalc Points O/U button */}
+        <button
+          onClick={async () => {
+            setRecalcingPoints(true);
+            setPointsRecalced(false);
+            setPointsResults(null);
+            try {
+              const res = await fetch('/api/admin/recalc-points-odds', { method: 'POST' });
+              if (res.ok) {
+                const data = await res.json();
+                setPointsRecalced(true);
+                setPointsResults(data.updates);
+                setTimeout(() => setPointsRecalced(false), 5000);
+              }
+            } finally {
+              setRecalcingPoints(false);
+            }
+          }}
+          disabled={recalcingPoints}
+          className={`w-full mt-2 px-4 py-3 rounded-xl text-sm font-bold transition-all border ${
+            pointsRecalced
+              ? 'bg-green-accent/10 text-green-bright border-green-bright/30'
+              : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10'
+          } disabled:opacity-50`}
+        >
+          {recalcingPoints ? 'Simulating points distributions (10k sims)...' : pointsRecalced ? 'Points markets updated!' : 'Recalc All Points O/U Lines (Individual + Group + Per-Round)'}
+        </button>
+        {pointsRecalced && pointsResults && (
+          <div className="mt-3 bg-navy-card border border-white/8 rounded-xl overflow-hidden max-h-64 overflow-y-auto">
+            {pointsResults.map((r, i) => (
+              <div key={i} className="px-4 py-2 border-b border-white/5 last:border-0 flex items-center justify-between">
+                <span className="text-xs text-white/70">{r.market}</span>
+                <span className="text-xs font-mono">
+                  <span className="text-gold font-bold">{r.line}</span>
+                  <span className="text-white/30 mx-1">|</span>
+                  <span className="text-green-bright">O ${r.overOdds}</span>
+                  <span className="text-white/20 mx-1">/</span>
+                  <span className="text-green-bright">U ${r.underOdds}</span>
+                </span>
               </div>
             ))}
           </div>

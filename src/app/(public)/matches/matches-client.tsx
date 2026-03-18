@@ -41,15 +41,15 @@ export function MatchesClient({ matches, h2hMarkets, stablefordMarkets }: Matche
       <h1 className="text-2xl font-black text-white mb-6">Matches</h1>
 
       {/* Round Tabs */}
-      <div className="flex gap-1 mb-6 overflow-x-auto">
+      <div className="flex gap-1.5 mb-5 overflow-x-auto">
         {TABS.map((tab) => (
           <button
             key={tab.round}
             onClick={() => setActiveRound(tab.round)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+            className={`px-5 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${
               activeRound === tab.round
-                ? 'bg-green-accent text-white'
-                : 'bg-white/5 text-white/50 hover:text-white/70'
+                ? 'bg-green-accent text-white shadow-lg shadow-green-accent/20'
+                : 'bg-white/[0.06] text-white/50 hover:text-white hover:bg-white/[0.1]'
             }`}
           >
             {tab.label}
@@ -65,8 +65,8 @@ export function MatchesClient({ matches, h2hMarkets, stablefordMarkets }: Matche
       {/* Round 1 - Stableford markets */}
       {activeRound === 1 && (
         <div className="space-y-4">
-          <div className="bg-navy-card border border-white/8 rounded-xl p-4">
-            <p className="text-sm text-white/50">
+          <div className="card-elevated rounded-xl p-4">
+            <p className="text-sm text-white/60">
               All 12 players compete individually. Points allocated for finishing order:
               1st gets 8 pts down to 8th getting 1 pt. Bottom 4 receive no points.
             </p>
@@ -80,26 +80,26 @@ export function MatchesClient({ matches, h2hMarkets, stablefordMarkets }: Matche
               <Link
                 key={market.id}
                 href={`/markets/${market.slug}`}
-                className="block bg-navy-card border border-white/8 rounded-xl overflow-hidden hover:border-white/15 transition-colors"
+                className="block card-elevated rounded-xl overflow-hidden hover:border-white/15 transition-all"
               >
-                <div className="px-4 py-2.5 border-b border-white/5 flex items-center justify-between">
-                  <span className="text-white font-semibold text-sm">{market.title}</span>
+                <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
+                  <span className="text-white font-bold text-[15px]">{market.title}</span>
                   {market.line_value && (
-                    <span className="text-xs text-gold font-bold">Line: {market.line_value}</span>
+                    <span className="text-sm text-gold font-black">{market.line_value}</span>
                   )}
                 </div>
-                <div className="divide-y divide-white/3">
-                  {sorted.slice(0, 4).map((sel) => (
-                    <div key={sel.id} className="px-4 py-2 flex items-center justify-between">
-                      <span className="text-sm text-white/70">{sel.name}</span>
-                      <span className="text-sm text-green-bright font-bold font-mono">
+                <div>
+                  {sorted.slice(0, 5).map((sel) => (
+                    <div key={sel.id} className="px-4 py-2.5 flex items-center justify-between border-b border-white/[0.04] last:border-0">
+                      <span className="text-[14px] text-white/80">{sel.name}</span>
+                      <span className="text-[15px] text-green-bright font-black font-mono odds-display px-3 py-1.5 rounded-lg odds-btn">
                         ${Number(sel.odds_decimal).toFixed(2)}
                       </span>
                     </div>
                   ))}
-                  {sorted.length > 4 && (
-                    <div className="px-4 py-2 text-xs text-white/25">
-                      +{sorted.length - 4} more selections
+                  {sorted.length > 5 && (
+                    <div className="px-4 py-2.5 text-sm text-green-bright/50 font-medium text-center border-t border-white/[0.04]">
+                      +{sorted.length - 5} more &rarr;
                     </div>
                   )}
                 </div>
@@ -124,50 +124,49 @@ export function MatchesClient({ matches, h2hMarkets, stablefordMarkets }: Matche
               <Link
                 key={match.id}
                 href={`/matches/${match.id}`}
-                className="block bg-navy-card border border-white/8 rounded-xl overflow-hidden hover:border-white/15 transition-colors"
+                className="block card-elevated rounded-xl overflow-hidden hover:border-white/15 transition-all"
               >
-                <div className="px-4 py-4">
-                  {/* Match title row */}
-                  <div className="flex items-center justify-between gap-3 mb-3">
-                    <div>
-                      <div className="text-sm text-white font-bold">
-                        {match.teamA}
-                        <span className="text-white/25 font-normal mx-2">vs</span>
-                        {match.teamB}
-                      </div>
-                      <div className="text-[10px] text-white/30 mt-0.5">
-                        {getTeamName(match.teamA)} vs {getTeamName(match.teamB)}
-                      </div>
+                {/* Match header */}
+                <div className="px-4 pt-4 pb-2">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[11px] text-white/40 font-medium">
+                      {getTeamName(match.teamA)} vs {getTeamName(match.teamB)}
                     </div>
-                    <div className="text-right shrink-0">
-                      <span className="text-[10px] text-gold font-bold">
-                        {match.favourite === 'even'
-                          ? `PK -${match.line}`
-                          : `${match.favourite === 'a' ? match.teamA : match.teamB} -${match.line}`}
-                      </span>
+                    <div className="text-[11px] text-gold font-semibold">
+                      {match.favourite === 'even'
+                        ? `PK -${match.line}`
+                        : `${match.favourite === 'a' ? match.teamA : match.teamB} -${match.line}`}
                     </div>
                   </div>
+                  <div className="text-base text-white font-bold mt-1">
+                    {match.teamA}
+                    <span className="text-white/30 font-normal mx-2">v</span>
+                    {match.teamB}
+                  </div>
+                </div>
 
-                  {/* Odds row */}
+                {/* Odds boxes - big and prominent like Sportsbet */}
+                <div className="px-4 pb-4 pt-1">
                   {sortedSels.length > 0 ? (
-                    <div className="flex gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       {sortedSels.map((sel) => (
-                        <div key={sel.id} className="flex-1 flex items-center justify-between px-3 py-2.5 rounded-lg bg-odds-bg/50 border border-green-bright/10">
-                          <span className="text-xs text-white/60">{sel.name}</span>
-                          <span className="text-sm text-green-bright font-bold font-mono">
+                        <div key={sel.id} className="odds-btn flex flex-col items-center py-3 px-2">
+                          <span className="text-[11px] text-white/50 font-medium mb-1 truncate w-full text-center">{sel.name}</span>
+                          <span className="text-lg text-green-bright font-black font-mono odds-display">
                             ${Number(sel.odds_decimal).toFixed(2)}
                           </span>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="text-xs text-white/25">Odds coming soon</div>
+                    <div className="text-sm text-white/30 py-2">Odds coming soon</div>
                   )}
+                </div>
 
-                  {/* Footer hint */}
-                  <div className="mt-2 text-[10px] text-white/20">
-                    Expand -- line, totals
-                  </div>
+                {/* Tap hint */}
+                <div className="px-4 pb-3 flex items-center justify-between">
+                  <span className="text-[10px] text-white/25">Line, totals, DNB</span>
+                  <span className="text-[10px] text-green-bright/50 font-medium">View all &rarr;</span>
                 </div>
               </Link>
             );

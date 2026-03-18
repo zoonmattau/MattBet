@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { LeaderboardIndividual, LeaderboardTeam } from '@/lib/types';
+import { createClient } from '@/lib/supabase/client';
 
 interface LeaderboardClientProps {
   individual: LeaderboardIndividual[];
@@ -10,8 +12,30 @@ interface LeaderboardClientProps {
 
 type TabType = 'team' | 'individual' | 'r1' | 'r2' | 'r3' | 'r4';
 
-export function LeaderboardClient({ individual, team }: LeaderboardClientProps) {
+export function LeaderboardClient({ individual: initialIndividual, team: initialTeam }: LeaderboardClientProps) {
   const [tab, setTab] = useState<TabType>('team');
+  const [individual, setIndividual] = useState(initialIndividual);
+  const [team, setTeam] = useState(initialTeam);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [isLive, setIsLive] = useState(true);
+
+  const refresh = useCallback(async () => {
+    const supabase = createClient();
+    const [{ data: ind }, { data: tm }] = await Promise.all([
+      supabase.from('leaderboard_individual').select('*').order('position'),
+      supabase.from('leaderboard_team').select('*').order('position'),
+    ]);
+    if (ind) setIndividual(ind);
+    if (tm) setTeam(tm);
+    setLastUpdated(new Date());
+  }, []);
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    if (!isLive) return;
+    const interval = setInterval(refresh, 30000);
+    return () => clearInterval(interval);
+  }, [isLive, refresh]);
 
   const tabs: { key: TabType; label: string }[] = [
     { key: 'team', label: 'Teams' },
@@ -24,7 +48,26 @@ export function LeaderboardClient({ individual, team }: LeaderboardClientProps) 
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
-      <h1 className="text-2xl font-black text-white mb-6">Leaderboard</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-black text-white">Leaderboard</h1>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={refresh}
+            className="text-[11px] text-white/30 hover:text-white/50 transition-colors"
+          >
+            Refresh
+          </button>
+          <button
+            onClick={() => setIsLive((v) => !v)}
+            className="flex items-center gap-1.5 text-[11px]"
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-bright animate-pulse' : 'bg-white/20'}`} />
+            <span className={isLive ? 'text-green-bright' : 'text-white/30'}>
+              {isLive ? 'Live' : 'Paused'}
+            </span>
+          </button>
+        </div>
+      </div>
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 overflow-x-auto">
@@ -45,7 +88,7 @@ export function LeaderboardClient({ individual, team }: LeaderboardClientProps) 
 
       {/* Team Leaderboard */}
       {tab === 'team' && (
-        <div className="bg-navy-card border border-white/8 rounded-xl overflow-hidden">
+        <div className="card-elevated rounded-xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/5">
@@ -80,7 +123,7 @@ export function LeaderboardClient({ individual, team }: LeaderboardClientProps) 
 
       {/* Individual Leaderboard */}
       {tab === 'individual' && (
-        <div className="bg-navy-card border border-white/8 rounded-xl overflow-hidden overflow-x-auto">
+        <div className="card-elevated rounded-xl overflow-hidden overflow-x-auto">
           <table className="w-full text-sm min-w-[600px]">
             <thead>
               <tr className="border-b border-white/5">
@@ -102,7 +145,7 @@ export function LeaderboardClient({ individual, team }: LeaderboardClientProps) 
                   className={`border-b border-white/3 ${idx === 0 ? 'bg-green-accent/5' : ''}`}
                 >
                   <td className="px-4 py-2.5 text-white/60 font-bold">{entry.position || idx + 1}</td>
-                  <td className="px-4 py-2.5 text-white font-semibold">{entry.player_name}</td>
+                  <td className="px-4 py-2.5 font-semibold"><Link href={`/players/${entry.player_name.toLowerCase()}`} className="text-white hover:text-green-bright transition-colors">{entry.player_name}</Link></td>
                   <td className="px-3 py-2.5 text-white/50 text-xs">{entry.team_name}</td>
                   <td className="text-right px-3 py-2.5 text-white/40 text-xs font-mono">{entry.handicap}</td>
                   <td className="text-right px-3 py-2.5 text-white/60 font-mono text-xs">{entry.round_1_points ?? '-'}</td>
@@ -162,7 +205,7 @@ function RoundView({
       <h2 className="text-base font-bold text-white mb-3">
         Round {roundNumber} - {roundLabels[roundNumber]}
       </h2>
-      <div className="bg-navy-card border border-white/8 rounded-xl overflow-hidden">
+      <div className="card-elevated rounded-xl overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-white/5">
@@ -180,7 +223,7 @@ function RoundView({
                 className={`border-b border-white/3 ${idx === 0 && getPoints(entry) !== null ? 'bg-green-accent/5' : ''}`}
               >
                 <td className="px-4 py-2.5 text-white/60 font-bold">{idx + 1}</td>
-                <td className="px-4 py-2.5 text-white font-semibold">{entry.player_name}</td>
+                <td className="px-4 py-2.5 font-semibold"><Link href={`/players/${entry.player_name.toLowerCase()}`} className="text-white hover:text-green-bright transition-colors">{entry.player_name}</Link></td>
                 <td className="px-3 py-2.5 text-white/50 text-xs">{entry.team_name}</td>
                 <td className="text-right px-3 py-2.5 text-white/60 font-mono">{getScore(entry) ?? '-'}</td>
                 <td className="text-right px-4 py-2.5 text-green-bright font-bold">{getPoints(entry) ?? '-'}</td>

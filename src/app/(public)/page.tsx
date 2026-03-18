@@ -37,6 +37,23 @@ export default async function HomePage() {
 
   const tripStatus = settings?.find((s) => s.key === 'trip_status')?.value || 'Markets Open';
 
+  // Fetch recent bets with market title and selection name
+  const { data: recentBets } = await supabase
+    .from('bets')
+    .select('id, stake, odds_taken, placed_at, market:markets(title, slug), selection:market_selections(name)')
+    .order('placed_at', { ascending: false })
+    .limit(20);
+
+  const betTicker = (recentBets || []).map((b: any) => ({
+    id: b.id,
+    stake: Number(b.stake),
+    odds: Number(b.odds_taken),
+    market: b.market?.title || '',
+    slug: b.market?.slug || '',
+    selection: b.selection?.name || '',
+    placedAt: b.placed_at,
+  }));
+
   return (
     <HomeClient
       featuredMarkets={(featuredMarkets as (Market & { selections: MarketSelection[] })[]) || []}
@@ -44,6 +61,7 @@ export default async function HomePage() {
       teamLeaderboard={(teamLeaderboard as LeaderboardTeam[]) || []}
       individualLeaderboard={(individualLeaderboard as LeaderboardIndividual[]) || []}
       tripStatus={tripStatus}
+      recentBets={betTicker}
     />
   );
 }

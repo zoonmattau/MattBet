@@ -21,6 +21,8 @@ export function MarketDetailAdmin({
   const [market, setMarket] = useState(initialMarket);
   const [editingOdds, setEditingOdds] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [deriving, setDeriving] = useState(false);
+  const [deriveResults, setDeriveResults] = useState<{ market: string; selections: { name: string; odds: number; prob: number }[] }[] | null>(null);
 
   const exposure = calculateExposure(market, market.selections, initialBets);
 
@@ -221,7 +223,7 @@ export function MarketDetailAdmin({
             ))}
           </div>
         </div>
-        <div className="flex gap-2 mt-4">
+        <div className="flex flex-wrap gap-2 mt-4">
           <button
             onClick={handleDuplicate}
             className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 text-white/50 hover:bg-white/10 transition-colors"
@@ -234,7 +236,52 @@ export function MarketDetailAdmin({
           >
             Add Selection
           </button>
+          {(market.slug === 'trip-champion' || market.slug === 'friday-stableford-winner') && (
+            <button
+              onClick={async () => {
+                setDeriving(true);
+                setDeriveResults(null);
+                try {
+                  const res = await fetch('/api/admin/derive-odds', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sourceSlug: market.slug }),
+                  });
+                  if (res.ok) {
+                    const data = await res.json();
+                    setDeriveResults(data.updates);
+                  }
+                } finally {
+                  setDeriving(false);
+                }
+              }}
+              disabled={deriving}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-gold/15 text-gold border border-gold/20 hover:bg-gold/25 transition-colors disabled:opacity-50"
+            >
+              {deriving ? 'Deriving...' : market.slug === 'trip-champion' ? 'Derive Top 3, Bottom 3, Spoon' : 'Derive Friday Top 3'}
+            </button>
+          )}
         </div>
+        {deriveResults && (
+          <div className="mt-3 bg-white/[0.02] border border-gold/15 rounded-lg overflow-hidden">
+            <div className="px-3 py-2 border-b border-white/5 text-xs font-bold text-gold">
+              Derived Markets Updated (50k sims)
+            </div>
+            {deriveResults.map((r, i) => (
+              <div key={i} className="px-3 py-2 border-b border-white/3 last:border-0">
+                <div className="text-xs font-semibold text-white mb-1">{r.market}</div>
+                <div className="flex flex-wrap gap-x-4 gap-y-0.5">
+                  {r.selections.map((s, j) => (
+                    <span key={j} className="text-[11px] text-white/50">
+                      {s.name}: <span className="text-green-bright font-bold">${s.odds.toFixed(2)}</span>
+                      <span className="text-white/20 ml-1">({s.prob.toFixed(1)}%)</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Selections & Odds Editor */}

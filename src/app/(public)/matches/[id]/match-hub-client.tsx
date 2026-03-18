@@ -307,7 +307,7 @@ function SimDNBBlock({
   const bOdds = round5(Math.max(1.01, (decided / (bWins || 1)) / 1.10));
 
   return (
-    <div className="bg-navy-card border border-white/8 rounded-xl overflow-hidden">
+    <div className="card-elevated rounded-xl overflow-hidden">
       <div className="px-4 py-2.5 border-b border-white/5">
         <span className="text-white font-semibold text-sm">Draw No Bet</span>
       </div>
@@ -403,7 +403,7 @@ function SimLineBlock({
   }
 
   return (
-    <div className="bg-navy-card border border-white/8 rounded-xl overflow-hidden">
+    <div className="card-elevated rounded-xl overflow-hidden">
       <div className="px-4 py-2.5 border-b border-white/5 flex items-center justify-between">
         <span className="text-white font-semibold text-sm">Line</span>
         <select
@@ -476,7 +476,7 @@ function SimTotalBlock({
   const odds = getAlternateTotalOdds(sims, displayValue, team);
 
   return (
-    <div className="bg-navy-card border border-white/8 rounded-xl overflow-hidden">
+    <div className="card-elevated rounded-xl overflow-hidden">
       <div className="px-4 py-2.5 border-b border-white/5 flex items-center justify-between">
         <span className="text-white font-semibold text-sm">{teamName}</span>
         <select
@@ -541,7 +541,7 @@ function OldAlternateMarkets({ match }: { match: MatchDefinition }) {
   const totalOptions = [3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10, 10.5, 11];
 
   return (
-    <div className="bg-navy-card border border-white/8 rounded-xl overflow-hidden">
+    <div className="card-elevated rounded-xl overflow-hidden">
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-white/[0.02] transition-colors"
@@ -692,11 +692,7 @@ function SimOddsRow({
       <span className="text-sm text-white/70">{label}</span>
       <button
         onClick={handleClick}
-        className={`text-sm font-bold font-mono px-3 py-1 rounded cursor-pointer transition-all ${
-          isSelected
-            ? 'text-green-bright bg-green-bright/15 border border-green-bright/30'
-            : 'text-green-bright/80 bg-white/[0.04] border border-white/[0.06] hover:bg-green-bright/10 hover:text-green-bright hover:border-green-bright/20'
-        }`}
+        className={`text-sm font-bold font-mono odds-display px-3 py-1.5 rounded-md odds-btn ${isSelected ? 'selected' : ''}`}
       >
         ${odds.toFixed(2)}
       </button>
@@ -725,7 +721,7 @@ function MarketBlock({
   });
 
   return (
-    <div className="bg-navy-card border border-white/8 rounded-xl overflow-hidden">
+    <div className="card-elevated rounded-xl overflow-hidden">
       <div className="px-4 py-2.5 border-b border-white/5 flex items-center justify-between">
         <span className="text-white font-semibold text-sm">{label}</span>
       </div>
@@ -738,11 +734,7 @@ function MarketBlock({
               <button
                 onClick={() => !isDisabled && onSelect(market, sel)}
                 disabled={isDisabled}
-                className={`text-sm font-bold font-mono px-3 py-1 rounded cursor-pointer transition-all disabled:cursor-default ${
-                  isSelected
-                    ? 'text-green-bright bg-green-bright/15 border border-green-bright/30'
-                    : 'text-green-bright/80 bg-white/[0.04] border border-white/[0.06] hover:bg-green-bright/10 hover:text-green-bright hover:border-green-bright/20'
-                }`}
+                className={`text-sm font-bold font-mono odds-display px-3 py-1.5 rounded-md odds-btn ${isSelected ? 'selected' : ''} disabled:cursor-default disabled:opacity-50`}
               >
                 ${Number(sel.odds_decimal).toFixed(2)}
               </button>

@@ -148,11 +148,146 @@ export default function RulesPage() {
             </p>
           </div>
           <div>
+            <h3 className="text-white font-semibold mb-1">Palpable Errors (Palp Rule)</h3>
+            <p>
+              If odds are posted in obvious error (e.g. $51.00 instead of $1.50, or a
+              selection priced that is clearly wrong), the bookmaker reserves the right to void
+              any bets placed at those odds or resettle them at the correct price. If you spot
+              odds that look too good to be true, they probably are.
+            </p>
+          </div>
+          <div>
+            <h3 className="text-white font-semibold mb-1">Right to Refuse</h3>
+            <p>
+              The bookmaker reserves the right to refuse, limit, or cancel any bet at his
+              discretion, for any reason. This includes but is not limited to suspected
+              eligibility violations, unusual betting patterns, or bets that exceed the
+              bookmaker&apos;s appetite for risk.
+            </p>
+          </div>
+          <div>
+            <h3 className="text-white font-semibold mb-1">Abandoned or Altered Events</h3>
+            <p>
+              If a round is cancelled, significantly shortened, or altered due to weather,
+              injury, player withdrawal, or any other reason, the bookmaker may void affected
+              markets in full or settle them based on results at the point of abandonment.
+              If a player withdraws mid-round, bets involving that player may be voided at the
+              bookmaker&apos;s discretion.
+            </p>
+          </div>
+          <div>
+            <h3 className="text-white font-semibold mb-1">Settlement Timing</h3>
+            <p>
+              Markets are settled at the bookmaker&apos;s convenience after the relevant event
+              is completed. There is no guaranteed settlement timeframe. The bookmaker may
+              delay settlement to verify results or investigate any concerns.
+            </p>
+          </div>
+          <div>
+            <h3 className="text-white font-semibold mb-1">Disputes</h3>
+            <p>
+              The bookmaker&apos;s decision is final on all matters including settlement,
+              voiding, rule interpretation, and any situation not explicitly covered by these
+              rules. No correspondence will be entered into (but feel free to have a whinge
+              in the group chat).
+            </p>
+          </div>
+          <div>
             <h3 className="text-white font-semibold mb-1">Binding Agreement</h3>
             <p>
               By placing a bet on MattBet you agree to pay MattBet in full on any losing bets.
               All bets are final -- non-cancellable and non-editable. Real money is being
               exchanged. If you win, MattBet pays you. If you lose, you pay MattBet. No exceptions.
+            </p>
+          </div>
+          <div>
+            <h3 className="text-white font-semibold mb-1">Rule Changes</h3>
+            <p>
+              The bookmaker reserves the right to update, modify, or add to these rules at any
+              time. Continued use of MattBet after any changes constitutes acceptance of the
+              updated rules.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Betting Eligibility */}
+      <section>
+        <h2 className="text-lg font-bold text-white mb-4">Betting Eligibility</h2>
+        <div className="bg-navy-card border border-white/8 rounded-xl p-5 space-y-4 text-sm text-white/60">
+          <p className="text-white/80">
+            Because you are betting on yourself and your mates, the following restrictions
+            apply to keep things fair. These rules exist to prevent any incentive to
+            deliberately underperform.
+          </p>
+
+          <div className="space-y-3">
+            <div className="rounded-lg bg-green-accent/10 border border-green-accent/20 p-4">
+              <h3 className="text-green-bright font-semibold mb-2 flex items-center gap-2">
+                <span className="text-base">&#10003;</span> You CAN bet on yourself to do well
+              </h3>
+              <p>
+                You are free to back yourself in any market where you are predicting your own
+                strong performance — e.g. betting on yourself to win a round, finish top 3,
+                or win a head-to-head match you are playing in.
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-danger/10 border border-danger/20 p-4">
+              <h3 className="text-danger font-semibold mb-2 flex items-center gap-2">
+                <span className="text-base">&#10007;</span> You CANNOT bet on yourself to do poorly
+              </h3>
+              <p>
+                You may not bet on yourself to finish bottom 3, receive the wooden spoon,
+                lose a head-to-head, or any other market that profits from your own poor
+                performance. You can, however, bet on other players to finish in those positions.
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-danger/10 border border-danger/20 p-4">
+              <h3 className="text-danger font-semibold mb-2 flex items-center gap-2">
+                <span className="text-base">&#10007;</span> You CANNOT bet on opponents in your own matches
+              </h3>
+              <p>
+                In any head-to-head or match-play market that you are personally involved in,
+                you may not place bets on your opponent to win. This removes any incentive to
+                throw a match. You are free to bet on either side in matches you are not
+                playing in.
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-white/5 border border-white/10 p-4">
+              <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
+                <span className="text-base">&#9745;</span> Matches you are NOT in
+              </h3>
+              <p>
+                If you are not a participant in a match, you may bet freely on any outcome
+                in that market — no restrictions apply.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Integrity & Collusion */}
+      <section>
+        <h2 className="text-lg font-bold text-white mb-4">Integrity</h2>
+        <div className="bg-navy-card border border-danger/15 rounded-xl p-5 text-sm text-white/60">
+          <div className="rounded-lg bg-danger/8 border border-danger/15 p-4">
+            <h3 className="text-danger font-semibold mb-2">Collusion &amp; Match Fixing</h3>
+            <p className="mb-3">
+              Any suspicion of collusion, match fixing, or deliberately underperforming to
+              influence the outcome of a bet may result in <span className="text-white font-semibold">all
+              bets placed by the offending party being settled as losers</span>, regardless of
+              actual results.
+            </p>
+            <p>
+              This includes, but is not limited to: coordinating outcomes with other players,
+              intentionally playing poorly to benefit a bet placed by yourself or someone else,
+              or sharing inside information about your intended performance for betting advantage.
+            </p>
+            <p className="mt-3 text-white/40 text-xs">
+              The bookmaker&apos;s decision on integrity matters is final.
             </p>
           </div>
         </div>

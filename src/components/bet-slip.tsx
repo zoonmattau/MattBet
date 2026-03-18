@@ -130,6 +130,9 @@ interface BetSlipProps {
   allMarkets?: (Market & { selections: MarketSelection[] })[];
 }
 
+const BETTOR_NAME_KEY = 'mattbet-bettor-name';
+const QUICK_STAKES = [5, 10, 20, 50, 100, 200];
+
 export function BetSlip({ items, onRemove, onClear, onBetPlaced, allMarkets }: BetSlipProps) {
   const [bettorName, setBettorName] = useState('');
   const [mode, setMode] = useState<'singles' | 'multi'>('singles');
@@ -139,6 +142,21 @@ export function BetSlip({ items, onRemove, onClear, onBetPlaced, allMarkets }: B
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const prevCount = useRef(items.length);
+
+  // Load saved bettor name
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(BETTOR_NAME_KEY);
+      if (saved) setBettorName(saved);
+    } catch {}
+  }, []);
+
+  // Save bettor name when it changes
+  useEffect(() => {
+    if (bettorName.trim()) {
+      try { localStorage.setItem(BETTOR_NAME_KEY, bettorName.trim()); } catch {}
+    }
+  }, [bettorName]);
 
   // Multis only allowed across different matches/events (no SGM)
   const hasSameMatch = (() => {
@@ -291,8 +309,8 @@ export function BetSlip({ items, onRemove, onClear, onBetPlaced, allMarkets }: B
   };
 
   return (
-    <div className="bg-navy-card border border-white/[0.08] rounded-lg overflow-hidden">
-      <div className="px-4 py-2.5 border-b border-white/[0.06] flex items-center justify-between">
+    <div className="card-elevated rounded-xl overflow-hidden border-t-2 border-t-green-bright">
+      <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between bg-green-accent/10">
         <span className="text-white font-bold text-sm">Bet Slip</span>
         <button onClick={onClear} className="text-[11px] text-white/30 hover:text-white/50">Clear</button>
       </div>
@@ -337,25 +355,42 @@ export function BetSlip({ items, onRemove, onClear, onBetPlaced, allMarkets }: B
               </span>
             </div>
             {mode === 'singles' && (
-              <div className="flex items-center gap-3">
-                <div className="flex-1 relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-sm">$</span>
-                  <input
-                    type="number" min="0" step="1"
-                    value={singleStakes[item.selection.id] || ''}
-                    onChange={(e) => setSingleStakes((p) => ({ ...p, [item.selection.id]: e.target.value }))}
-                    placeholder="0"
-                    className="w-full pl-7 pr-3 py-1.5 rounded bg-white/[0.05] border border-white/[0.08] text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-green-bright/50"
-                  />
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-sm">$</span>
+                    <input
+                      type="number" min="0" step="1"
+                      value={singleStakes[item.selection.id] || ''}
+                      onChange={(e) => setSingleStakes((p) => ({ ...p, [item.selection.id]: e.target.value }))}
+                      placeholder="0"
+                      className="w-full pl-7 pr-3 py-1.5 rounded bg-white/[0.05] border border-white/[0.08] text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-green-bright/50"
+                    />
+                  </div>
+                  {getSingleStake(item.selection.id) > 0 && (
+                    <span className="text-[11px] text-white/35 shrink-0">
+                      {formatCurrency(getSingleStake(item.selection.id) * Number(item.selection.odds_decimal))}
+                    </span>
+                  )}
+                  <button onClick={() => onRemove(item.selection.id)} className="text-[10px] text-white/20 hover:text-white/40 shrink-0">
+                    x
+                  </button>
                 </div>
-                {getSingleStake(item.selection.id) > 0 && (
-                  <span className="text-[11px] text-white/35 shrink-0">
-                    {formatCurrency(getSingleStake(item.selection.id) * Number(item.selection.odds_decimal))}
-                  </span>
-                )}
-                <button onClick={() => onRemove(item.selection.id)} className="text-[10px] text-white/20 hover:text-white/40 shrink-0">
-                  x
-                </button>
+                <div className="flex gap-1">
+                  {QUICK_STAKES.map((qs) => (
+                    <button
+                      key={qs}
+                      onClick={() => setSingleStakes((p) => ({ ...p, [item.selection.id]: String(qs) }))}
+                      className={`flex-1 py-1 rounded text-[10px] font-medium transition-colors ${
+                        singleStakes[item.selection.id] === String(qs)
+                          ? 'bg-green-bright/20 text-green-bright border border-green-bright/30'
+                          : 'bg-white/[0.04] text-white/30 border border-white/[0.06] hover:text-white/50'
+                      }`}
+                    >
+                      ${qs}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
             {mode === 'multi' && (
@@ -399,6 +434,21 @@ export function BetSlip({ items, onRemove, onClear, onBetPlaced, allMarkets }: B
                 </span>
               )}
             </div>
+            <div className="flex gap-1">
+              {QUICK_STAKES.map((qs) => (
+                <button
+                  key={qs}
+                  onClick={() => setMultiStake(String(qs))}
+                  className={`flex-1 py-1 rounded text-[10px] font-medium transition-colors ${
+                    multiStake === String(qs)
+                      ? 'bg-green-bright/20 text-green-bright border border-green-bright/30'
+                      : 'bg-white/[0.04] text-white/30 border border-white/[0.06] hover:text-white/50'
+                  }`}
+                >
+                  ${qs}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -422,7 +472,7 @@ export function BetSlip({ items, onRemove, onClear, onBetPlaced, allMarkets }: B
         <button
           onClick={handlePlaceBets}
           disabled={placing || (mode === 'singles' ? singlesTotalStake <= 0 : multiStakeNum <= 0)}
-          className="w-full py-2.5 rounded-lg bg-green-accent text-white font-bold text-sm hover:bg-green-bright transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="w-full py-3 rounded-lg bg-green-bright text-white font-black text-base hover:bg-green-bright/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {placing
             ? 'Placing...'
@@ -430,6 +480,37 @@ export function BetSlip({ items, onRemove, onClear, onBetPlaced, allMarkets }: B
               ? `Place Multi -- ${formatCurrency(multiStakeNum)}`
               : `Place Bet${singlesTotalStake > 0 ? ` -- ${formatCurrency(singlesTotalStake)}` : ''}`}
         </button>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              const slip = items.map((i) => `${i.selection.name} (${i.market.title}) @ $${Number(i.selection.odds_decimal).toFixed(2)}`).join('\n');
+              const text = mode === 'multi'
+                ? `MattBet Slip:\n${slip}\n\nMulti @ $${multiOdds.toFixed(2)}`
+                : `MattBet Slip:\n${slip}`;
+              if (navigator.share) {
+                navigator.share({ text }).catch(() => {});
+              } else {
+                navigator.clipboard.writeText(text).then(() => setError('Copied to clipboard!'));
+                setTimeout(() => setError(null), 2000);
+              }
+            }}
+            className="flex-1 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-white/30 text-[11px] font-medium hover:text-white/50 hover:bg-white/[0.06] transition-colors"
+          >
+            Share Slip
+          </button>
+          <button
+            onClick={() => {
+              const ids = items.map((i) => i.selection.id).join(',');
+              const url = `${window.location.origin}/markets?slip=${ids}`;
+              navigator.clipboard.writeText(url).then(() => setError('Link copied!'));
+              setTimeout(() => setError(null), 2000);
+            }}
+            className="flex-1 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-white/30 text-[11px] font-medium hover:text-white/50 hover:bg-white/[0.06] transition-colors"
+          >
+            Copy Link
+          </button>
+        </div>
 
         <p className="text-[10px] text-white/20 leading-relaxed">
           By placing this bet you agree to pay MattBet in full on any losing bets. All bets are final -- non-cancellable, non-editable, and involve real money.

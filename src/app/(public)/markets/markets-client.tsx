@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Market, MarketSelection, BetSlipItem } from '@/lib/types';
 import { BetSlip } from '@/components/bet-slip';
@@ -43,7 +43,31 @@ const TABS = [
   { key: 'r4', label: 'R4 Sunday' },
 ];
 
-const COLLAPSE_THRESHOLD = 4;
+const COLLAPSE_THRESHOLD = 3;
+
+// Round close times (markets should close before tee-off)
+const ROUND_CLOSE_TIMES: Record<string, Date> = {
+  'Friday': new Date('2026-04-03T13:15:00+11:00'),      // R1: 1:30pm tee, close 15min before
+  'Saturday AM': new Date('2026-04-04T08:15:00+11:00'),  // R2: 8:30am tee
+  'Saturday PM': new Date('2026-04-04T14:45:00+11:00'),  // R3: 3:00pm tee
+  'Sunday': new Date('2026-04-05T07:45:00+11:00'),       // R4: 8:00am tee
+};
+
+function getClosingSoonLabel(roundLabel: string | null): string | null {
+  if (!roundLabel) return null;
+  const closeTime = ROUND_CLOSE_TIMES[roundLabel];
+  if (!closeTime) return null;
+  const now = new Date();
+  const diff = closeTime.getTime() - now.getTime();
+  if (diff <= 0) return null; // already closed
+  const hours = diff / (1000 * 60 * 60);
+  if (hours <= 1) {
+    const mins = Math.ceil(diff / (1000 * 60));
+    return `Closes in ${mins}m`;
+  }
+  if (hours <= 24) return `Closes in ${Math.ceil(hours)}h`;
+  return null;
+}
 
 interface MarketsClientProps {
   matches: MatchDefinition[];
@@ -56,6 +80,28 @@ export function MarketsClient({ matches, markets }: MarketsClientProps) {
   const initialTab = searchParams.get('tab') || 'outrights';
   const [activeTab, setActiveTab] = useState(initialTab);
   const [expandedMarkets, setExpandedMarkets] = useState<Record<string, boolean>>({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const isSearching = searchQuery.trim().length > 0;
+  const slipLoaded = useRef(false);
+
+  // Load shared bet slip from URL
+  useEffect(() => {
+    if (slipLoaded.current) return;
+    const slipParam = searchParams.get('slip');
+    if (!slipParam) return;
+    slipLoaded.current = true;
+    const ids = slipParam.split(',');
+    clear();
+    for (const market of markets) {
+      for (const sel of market.selections) {
+        if (ids.includes(sel.id)) {
+          addItem(market, sel);
+        }
+      }
+    }
+    // Clean the URL
+    window.history.replaceState({}, '', '/markets');
+  }, [searchParams, markets, addItem, clear]);
 
   const handleSelectBet = (market: Market, selection: MarketSelection) => {
     addItem(market, selection);
@@ -123,8 +169,27 @@ export function MarketsClient({ matches, markets }: MarketsClientProps) {
     <div className="max-w-5xl mx-auto px-4 md:px-6 py-8">
       <h1 className="text-2xl font-black text-white mb-6">Markets</h1>
 
+      {/* Search */}
+      <div className="mb-6">
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-sm">&#128269;</span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search markets or players..."
+            className="w-full pl-9 pr-8 py-2.5 rounded-lg bg-navy-card border border-white/10 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-green-bright/50"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/50 text-xs">
+              &#10005;
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Tabs */}
-      <div className="flex gap-0.5 mb-8 border-b border-white/[0.04] overflow-hidden">
+      <div className={`flex gap-0.5 mb-8 border-b border-white/[0.04] overflow-hidden ${isSearching ? 'hidden' : ''}`}>
         {TABS.map((tab) => (
           <button
             key={tab.key}
@@ -156,8 +221,20 @@ export function MarketsClient({ matches, markets }: MarketsClientProps) {
       <div className={`grid gap-6 ${betSlip.length > 0 ? 'lg:grid-cols-3' : ''}`}>
         <div className={`${betSlip.length > 0 ? 'lg:col-span-2' : ''} space-y-3`}>
 
+          {/* SEARCH RESULTS */}
+          {isSearching && (
+            <SearchResults
+              query={searchQuery}
+              markets={markets}
+              expandedMarkets={expandedMarkets}
+              toggleMarket={toggleMarket}
+              betSlip={betSlip}
+              onSelectBet={handleSelectBet}
+            />
+          )}
+
           {/* OUTRIGHTS TAB */}
-          {activeTab === 'outrights' && (
+          {!isSearching && activeTab === 'outrights' && (
             <OutrightsTab
               markets={outrightMarkets}
               expandedMarkets={expandedMarkets}
@@ -168,7 +245,7 @@ export function MarketsClient({ matches, markets }: MarketsClientProps) {
           )}
 
           {/* R1 FRIDAY TAB */}
-          {activeTab === 'r1' && (
+          {!isSearching && activeTab === 'r1' && (
             <R1FridayTab
               stablefordMarkets={stablefordMarkets}
               scoreTotalsMarkets={fridayScoreTotals}
@@ -180,7 +257,7 @@ export function MarketsClient({ matches, markets }: MarketsClientProps) {
           )}
 
           {/* R2, R3, R4 TABS */}
-          {['r2', 'r3', 'r4'].includes(activeTab) && (
+          {!isSearching && ['r2', 'r3', 'r4'].includes(activeTab) && (
             <RoundMatchTab
               matches={matches}
               roundNum={parseInt(activeTab.replace('r', ''))}
@@ -274,7 +351,7 @@ function RoundMatchTab({
             <Link
               key={match.id}
               href={`/matches/${match.id}`}
-              className="block bg-navy-card border border-white/8 rounded-xl overflow-hidden hover:border-white/15 transition-colors"
+              className="block card-elevated rounded-xl overflow-hidden hover:border-white/15 transition-colors"
             >
               <div className="px-4 py-4">
                 <div className="flex items-center justify-between gap-3 mb-3">
@@ -327,7 +404,7 @@ function RoundMatchTab({
           {extraSections.map((section) => {
             const isOpen = openSections[section.label] ?? false;
             return (
-              <div key={section.label} className="bg-navy-card border border-white/8 rounded-xl overflow-hidden">
+              <div key={section.label} className="card-elevated rounded-xl overflow-hidden">
                 <button
                   onClick={() => toggle(section.label)}
                   className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-white/3 transition-colors"
@@ -416,7 +493,7 @@ function OutrightsTab({
       {sections.map((section) => {
         const isOpen = openSections[section.label] ?? false;
         return (
-          <div key={section.label} className="bg-navy-card border border-white/8 rounded-xl overflow-hidden">
+          <div key={section.label} className="card-elevated rounded-xl overflow-hidden">
             <button
               onClick={() => toggle(section.label)}
               className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-white/3 transition-colors"
@@ -535,7 +612,7 @@ function R1FridayTab({
         {sections.map((section) => {
           const isOpen = openSections[section.label] ?? false;
           return (
-            <div key={section.label} className="bg-navy-card border border-white/8 rounded-xl overflow-hidden">
+            <div key={section.label} className="card-elevated rounded-xl overflow-hidden">
               <button
                 onClick={() => toggleSection(section.label)}
                 className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-white/3 transition-colors"
@@ -562,7 +639,7 @@ function R1FridayTab({
         })}
 
         {/* Build Your Own H2H */}
-        <div className="bg-navy-card border border-white/8 rounded-xl overflow-hidden">
+        <div className="card-elevated rounded-xl overflow-hidden">
           <button
             onClick={() => toggleSection('Head to Head')}
             className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-white/3 transition-colors"
@@ -596,29 +673,42 @@ function MarketBlock({
 }) {
   const isDisabled = market.status !== 'open';
   const hasGroups = market.selections.some((s) => s.name.startsWith('Group '));
-  const isOverUnder = market.selections.some((s) => s.name.toLowerCase().startsWith('over') || s.name.toLowerCase().startsWith('under'));
+  const isOverUnderOrYesNo = market.selections.some((s) => {
+    const n = s.name.toLowerCase();
+    return n.startsWith('over') || n.startsWith('under') || n === 'yes' || n === 'no';
+  });
   const sorted = [...market.selections].sort((a, b) => {
     if (hasGroups) return a.sort_order - b.sort_order;
-    if (isOverUnder) {
-      // Over always first
-      const aIsOver = a.name.toLowerCase().startsWith('over') || a.name.toLowerCase().startsWith('yes');
-      const bIsOver = b.name.toLowerCase().startsWith('over') || b.name.toLowerCase().startsWith('yes');
-      if (aIsOver && !bIsOver) return -1;
-      if (!aIsOver && bIsOver) return 1;
+    if (isOverUnderOrYesNo) {
+      const aFirst = a.name.toLowerCase().startsWith('over') || a.name.toLowerCase() === 'yes';
+      const bFirst = b.name.toLowerCase().startsWith('over') || b.name.toLowerCase() === 'yes';
+      if (aFirst && !bFirst) return -1;
+      if (!aFirst && bFirst) return 1;
       return a.sort_order - b.sort_order;
     }
     return Number(a.odds_decimal) - Number(b.odds_decimal);
   });
   const needsExpand = sorted.length > COLLAPSE_THRESHOLD;
   const visible = needsExpand && !expanded ? sorted.slice(0, COLLAPSE_THRESHOLD) : sorted;
+  const closingLabel = getClosingSoonLabel(market.round_label);
 
   return (
     <div className="border-b border-white/[0.06] last:border-0">
       <div className="px-4 py-2.5">
-        <div className="min-w-0">
+        <div className="min-w-0 flex items-center gap-2">
           <span className="text-[13px] text-white/80 font-medium">{market.title}</span>
           {MARKET_SUBTITLES[market.slug] && (
-            <span className="text-[11px] text-white/35 ml-2">{MARKET_SUBTITLES[market.slug]}</span>
+            <span className="text-[11px] text-white/35">{MARKET_SUBTITLES[market.slug]}</span>
+          )}
+          {closingLabel && (
+            <span className="text-[9px] px-1.5 py-0.5 rounded bg-warning/15 text-warning border border-warning/20 font-semibold shrink-0">
+              {closingLabel}
+            </span>
+          )}
+          {market.status === 'suspended' && (
+            <span className="text-[9px] px-1.5 py-0.5 rounded bg-warning/15 text-warning border border-warning/20 font-semibold shrink-0">
+              Suspended
+            </span>
           )}
         </div>
       </div>
@@ -646,6 +736,53 @@ function MarketBlock({
         <button onClick={onToggle} className="w-full px-4 py-1.5 text-[11px] text-white/30 hover:text-white/50 text-left">
           {expanded ? 'Less' : `+${sorted.length - COLLAPSE_THRESHOLD} more`}
         </button>
+      )}
+    </div>
+  );
+}
+
+function SearchResults({
+  query,
+  markets,
+  expandedMarkets,
+  toggleMarket,
+  betSlip,
+  onSelectBet,
+}: {
+  query: string;
+  markets: (Market & { selections: MarketSelection[] })[];
+  expandedMarkets: Record<string, boolean>;
+  toggleMarket: (id: string) => void;
+  betSlip: BetSlipItem[];
+  onSelectBet: (market: Market, selection: MarketSelection) => void;
+}) {
+  const q = query.toLowerCase().trim();
+  const results = markets.filter((m) => {
+    if (m.title.toLowerCase().includes(q)) return true;
+    if (m.slug.toLowerCase().includes(q)) return true;
+    return m.selections.some((s) => s.name.toLowerCase().includes(q));
+  });
+
+  return (
+    <div className="space-y-3">
+      <div className="text-sm text-white/40">
+        {results.length} market{results.length !== 1 ? 's' : ''} matching &quot;{query}&quot;
+      </div>
+      {results.length === 0 ? (
+        <div className="text-center py-12 text-white/30 text-sm">No markets found.</div>
+      ) : (
+        <div className="card-elevated rounded-xl overflow-hidden">
+          {results.map((market) => (
+            <MarketBlock
+              key={market.id}
+              market={market}
+              expanded={expandedMarkets[market.id] ?? true}
+              onToggle={() => toggleMarket(market.id)}
+              betSlip={betSlip}
+              onSelectBet={onSelectBet}
+            />
+          ))}
+        </div>
       )}
     </div>
   );

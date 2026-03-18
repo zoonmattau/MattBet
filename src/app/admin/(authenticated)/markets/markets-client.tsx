@@ -142,6 +142,8 @@ function AdminMarketRow({
   const [saving, setSaving] = useState<string | null>(null);
   const [editingLine, setEditingLine] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState<string | null>(null);
+  const [deriving, setDeriving] = useState(false);
+  const [derived, setDerived] = useState(false);
 
   // Live overround: uses editing values when present
   const getLiveOdds = (sel: MarketSelection) => {
@@ -375,27 +377,70 @@ function AdminMarketRow({
               {overroundChanged && <span className="text-white/25 font-normal"> (was {savedOverround.toFixed(1)}%)</span>}
               <span className="text-white/25 font-normal"> -- {market.selections.length} selections</span>
             </div>
-            {Object.keys(editingOdds).length > 0 && (
-              <button
-                onClick={async () => {
-                  setSaving('all');
-                  const supabase = createClient();
-                  for (const [selId, val] of Object.entries(editingOdds)) {
-                    const newOdds = parseFloat(val);
-                    if (newOdds && newOdds > 1) {
-                      await supabase.from('market_selections').update({ odds_decimal: newOdds }).eq('id', selId);
+            <div className="flex gap-2">
+              {(market.slug === 'trip-champion' || market.slug === 'friday-stableford-winner') && (
+                <button
+                  onClick={async () => {
+                    // Save any pending odds first
+                    if (Object.keys(editingOdds).length > 0) {
+                      const supabase = createClient();
+                      for (const [selId, val] of Object.entries(editingOdds)) {
+                        const newOdds = parseFloat(val);
+                        if (newOdds && newOdds > 1) {
+                          await supabase.from('market_selections').update({ odds_decimal: newOdds }).eq('id', selId);
+                        }
+                      }
+                      setEditingOdds({});
                     }
-                  }
-                  setEditingOdds({});
-                  setSaving(null);
-                  router.refresh();
-                }}
-                disabled={saving === 'all'}
-                className="px-3 py-1.5 rounded-lg bg-green-accent text-white text-xs font-bold hover:bg-green-bright transition-colors disabled:opacity-50"
-              >
-                {saving === 'all' ? 'Saving...' : `Save All (${Object.keys(editingOdds).length})`}
-              </button>
-            )}
+                    setDeriving(true);
+                    setDerived(false);
+                    try {
+                      const res = await fetch('/api/admin/derive-odds', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sourceSlug: market.slug }),
+                      });
+                      if (res.ok) {
+                        setDerived(true);
+                        setTimeout(() => setDerived(false), 3000);
+                      }
+                    } finally {
+                      setDeriving(false);
+                      router.refresh();
+                    }
+                  }}
+                  disabled={deriving}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors disabled:opacity-50 ${
+                    derived
+                      ? 'bg-green-accent/20 text-green-bright border border-green-bright/30'
+                      : 'bg-gold/15 text-gold border border-gold/20 hover:bg-gold/25'
+                  }`}
+                >
+                  {deriving ? 'Running 50k sims...' : derived ? 'Done!' : market.slug === 'trip-champion' ? 'Derive Top3/Bot3/Spoon' : 'Derive Friday Top 3'}
+                </button>
+              )}
+              {Object.keys(editingOdds).length > 0 && (
+                <button
+                  onClick={async () => {
+                    setSaving('all');
+                    const supabase = createClient();
+                    for (const [selId, val] of Object.entries(editingOdds)) {
+                      const newOdds = parseFloat(val);
+                      if (newOdds && newOdds > 1) {
+                        await supabase.from('market_selections').update({ odds_decimal: newOdds }).eq('id', selId);
+                      }
+                    }
+                    setEditingOdds({});
+                    setSaving(null);
+                    router.refresh();
+                  }}
+                  disabled={saving === 'all'}
+                  className="px-3 py-1.5 rounded-lg bg-green-accent text-white text-xs font-bold hover:bg-green-bright transition-colors disabled:opacity-50"
+                >
+                  {saving === 'all' ? 'Saving...' : `Save All (${Object.keys(editingOdds).length})`}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

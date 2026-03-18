@@ -46,9 +46,10 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 
-  --color-navy: #1a2332;
+  --color-navy: #141c28;
   --color-navy-light: #212d3f;
-  --color-navy-card: #1e2a3a;
+  --color-navy-card: #1a2536;
+  --color-navy-elevated: #1e2d42;
   --color-surface: #222f40;
   --color-green-accent: #2d6a4f;
   --color-green-muted: #1b4332;
@@ -103,19 +104,145 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background: #0f151f;
+    min-height: 100vh;
   }
   html {
     @apply font-sans;
     -webkit-font-smoothing: antialiased;
   }
+  /* Smooth transitions on all interactive elements */
+  button, a, [role="button"] {
+    transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  }
 }
 
+/* Layout */
 .pb-bottom-nav {
-  padding-bottom: 3.5rem;
+  padding-bottom: 4.5rem;
 }
 
-.status-open { color: #4eca8b; }
-.status-suspended { color: #f4a261; }
+.header-glass {
+  background: rgba(15, 21, 31, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.bottom-nav-glass {
+  background: rgba(12, 17, 25, 0.98);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Cards - visible against the dark bg */
+.card-elevated {
+  background: #192536;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.card-featured {
+  border-color: rgba(224, 180, 74, 0.15);
+}
+
+/* Odds boxes - Sportsbet style: chunky, bright, tappable */
+@layer components {
+  .odds-btn {
+    background: #1a3a2a;
+    border: 1.5px solid rgba(78, 202, 139, 0.2);
+    border-radius: 8px;
+    transition: all 0.12s ease;
+    cursor: pointer;
+    color: #4eca8b;
+  }
+  .odds-btn:hover:not(:disabled) {
+    background: #1f4a32;
+    border-color: rgba(78, 202, 139, 0.45);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(78, 202, 139, 0.12);
+  }
+  .odds-btn:active:not(:disabled) {
+    transform: translateY(0);
+    background: #245a3a;
+  }
+  .odds-btn.selected, .odds-btn[data-selected="true"] {
+    background: #2d6a4f;
+    border-color: #4eca8b;
+    color: #fff;
+    box-shadow: 0 0 20px rgba(78, 202, 139, 0.2), inset 0 1px 0 rgba(255,255,255,0.1);
+  }
+}
+
+/* Status indicators */
+.status-open {
+  color: #4eca8b;
+  position: relative;
+  padding-left: 14px;
+}
+.status-open::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  background: #4eca8b;
+  border-radius: 50%;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.status-suspended {
+  color: #f4a261;
+  position: relative;
+  padding-left: 14px;
+}
+.status-suspended::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  background: #f4a261;
+  border-radius: 50%;
+}
+
 .status-settled { color: #94a3b8; }
 .status-void { color: #e63946; }
+.status-pending { color: #e0b44a; }
+.status-won { color: #4eca8b; }
+.status-lost { color: #e63946; }
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(78, 202, 139, 0.4); }
+  50% { opacity: 0.7; box-shadow: 0 0 0 4px rgba(78, 202, 139, 0); }
+}
+
+/* Typography helpers */
+.odds-display {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Bet ticker animation */
+@keyframes ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-ticker {
+  animation: ticker 80s linear infinite;
+}
+.animate-ticker:hover {
+  animation-play-state: paused;
+}
+
+/* Leaderboard position badges */
+.pos-1 { color: #e0b44a; }
+.pos-2 { color: #c0c0c0; }
+.pos-3 { color: #cd7f32; }

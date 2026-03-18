@@ -7,6 +7,41 @@ import { BetSlip } from '@/components/bet-slip';
 import { impliedProbability } from '@/lib/exposure';
 import Link from 'next/link';
 
+const MARKET_DESCRIPTIONS: Record<string, string> = {
+  'trip-champion': 'The player with the most total points across all 4 rounds wins. Dead heat rules apply if tied.',
+  'winning-team': 'The team (group) with the most combined points across all 4 rounds. Dead heat rules apply.',
+  'overall-top-3': 'Settled on the top 3 individual point scorers across the trip. Dead heat rules apply at the cut-off.',
+  'overall-bottom-3': 'Settled on the 3 lowest individual point scorers across the trip. Dead heat rules apply.',
+  'wooden-spoon': 'The player with the fewest total points across all 4 rounds. Dead heat rules apply.',
+  'friday-stableford-winner': 'Highest net stableford score in Round 1. Handicaps applied. Dead heat rules apply.',
+  'friday-last-place': 'Lowest net stableford score in Round 1. Dead heat rules apply.',
+  'friday-top-3': 'Top 3 stableford scorers on Friday. Dead heat rules apply at the cut-off.',
+  'friday-top-4': 'Top 4 stableford scorers on Friday. Dead heat rules apply at the cut-off.',
+  'friday-top-half': 'Finish in the top 6 on Friday stableford. Dead heat rules apply.',
+  'friday-bottom-half': 'Finish in the bottom 6 on Friday stableford. Dead heat rules apply.',
+  'friday-bottom-4': 'Bottom 4 stableford scorers on Friday. Dead heat rules apply.',
+  'friday-best-team': 'The team whose players combine for the most stableford points on Friday.',
+  'friday-best-of-group': 'The top individual scorer from each group on Friday stableford.',
+  'trip-hole-in-one': 'Will any player make a hole-in-one during the trip? Settled yes/no.',
+  'trip-lowest-gross': 'The player with the lowest gross (pre-handicap) score in Round 1.',
+};
+
+const MATCH_DESC = 'Head-to-head match play. Settled on match result after 18 holes. Handicap strokes applied per hole.';
+const LINE_DESC = 'Handicap line market. The favoured side must win by more than the line to cover. Push (exact margin = line) results in void/refund.';
+const TOTAL_DESC = 'Total holes won by this player/pair. Settled on the actual holes won count. Half-holes (.5) mean no push is possible.';
+const OU_DESC = 'Over/under line market. Settled on the actual score/stat. Push at exact line results in void/refund.';
+
+function getMarketDescription(market: Market): string | null {
+  if (MARKET_DESCRIPTIONS[market.slug]) return MARKET_DESCRIPTIONS[market.slug];
+  if (market.slug.includes('-h2h')) return MATCH_DESC;
+  if (market.slug.includes('-line')) return LINE_DESC;
+  if (market.slug.includes('-total')) return TOTAL_DESC;
+  if (market.category === 'score_totals') return OU_DESC;
+  if (market.slug.includes('-total-pts')) return 'Total individual points scored across the entire trip. Settled on final points tally.';
+  if (market.slug.includes('group-') && market.slug.includes('-points')) return 'Total team points for this group across all rounds.';
+  return null;
+}
+
 interface MarketDetailClientProps {
   market: Market & { selections: MarketSelection[] };
 }
@@ -25,9 +60,20 @@ export function MarketDetailClient({ market }: MarketDetailClientProps) {
     });
   };
 
-  const sorted = [...market.selections].sort(
-    (a, b) => Number(a.odds_decimal) - Number(b.odds_decimal)
-  );
+  const isOverUnderOrYesNo = market.selections.some((s) => {
+    const n = s.name.toLowerCase();
+    return n.startsWith('over') || n.startsWith('under') || n === 'yes' || n === 'no';
+  });
+  const sorted = [...market.selections].sort((a, b) => {
+    if (isOverUnderOrYesNo) {
+      const aFirst = a.name.toLowerCase().startsWith('over') || a.name.toLowerCase() === 'yes';
+      const bFirst = b.name.toLowerCase().startsWith('over') || b.name.toLowerCase() === 'yes';
+      if (aFirst && !bFirst) return -1;
+      if (!aFirst && bFirst) return 1;
+      return a.sort_order - b.sort_order;
+    }
+    return Number(a.odds_decimal) - Number(b.odds_decimal);
+  });
 
   const overround = market.selections.reduce(
     (sum, s) => sum + 1 / Number(s.odds_decimal),
@@ -55,6 +101,13 @@ export function MarketDetailClient({ market }: MarketDetailClientProps) {
               <div className="mb-4 p-3 rounded-lg bg-white/3 border border-white/5">
                 <span className="text-xs text-white/40 uppercase tracking-wide">Line: </span>
                 <span className="text-lg font-bold text-gold">{market.line_value}</span>
+              </div>
+            )}
+
+            {getMarketDescription(market) && (
+              <div className="mb-3 p-3 rounded-lg bg-white/[0.03] border border-white/5">
+                <div className="text-[11px] text-white/30 uppercase tracking-wide mb-1">Settlement Rules</div>
+                <p className="text-xs text-white/50 leading-relaxed">{getMarketDescription(market)}</p>
               </div>
             )}
 
