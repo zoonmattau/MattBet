@@ -162,7 +162,18 @@ export function MarketDetailAdmin({
     }
   };
 
-  const overround = market.selections.reduce((s, sel) => s + 1 / Number(sel.odds_decimal), 0) * 100;
+  // Live overround: uses editing values (unsaved) when present, otherwise saved odds
+  const getLiveOdds = (sel: MarketSelection) => {
+    const editing = editingOdds[sel.id];
+    if (editing !== undefined) {
+      const parsed = parseFloat(editing);
+      return parsed > 0 ? parsed : Number(sel.odds_decimal);
+    }
+    return Number(sel.odds_decimal);
+  };
+  const overround = market.selections.reduce((s, sel) => s + 1 / getLiveOdds(sel), 0) * 100;
+  const savedOverround = market.selections.reduce((s, sel) => s + 1 / Number(sel.odds_decimal), 0) * 100;
+  const overroundChanged = Math.abs(overround - savedOverround) > 0.05;
 
   return (
     <div className="space-y-6">
@@ -185,7 +196,12 @@ export function MarketDetailAdmin({
               {market.line_value && (
                 <span className="text-xs text-gold">Line: {market.line_value}</span>
               )}
-              <span className="text-xs text-white/30">Margin: {overround.toFixed(1)}%</span>
+              <span className={`text-xs font-medium ${overroundChanged ? 'text-gold' : 'text-white/30'}`}>
+                Margin: {overround.toFixed(1)}%
+                {overroundChanged && (
+                  <span className="text-white/30 ml-1">(was {savedOverround.toFixed(1)}%)</span>
+                )}
+              </span>
             </div>
           </div>
           <div className="flex gap-2 shrink-0">
@@ -223,8 +239,39 @@ export function MarketDetailAdmin({
 
       {/* Selections & Odds Editor */}
       <div className="bg-navy-card border border-white/8 rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-white/5">
+        <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-white">Selections and Odds</h2>
+          {Object.keys(editingOdds).length > 0 && (
+            <button
+              onClick={async () => {
+                setSaving(true);
+                const supabase = createClient();
+                for (const [selId, val] of Object.entries(editingOdds)) {
+                  const newOdds = parseFloat(val);
+                  if (!newOdds || newOdds <= 1) continue;
+                  await supabase
+                    .from('market_selections')
+                    .update({ odds_decimal: newOdds })
+                    .eq('id', selId);
+                }
+                setMarket((prev) => ({
+                  ...prev,
+                  selections: prev.selections.map((s) => {
+                    const val = editingOdds[s.id];
+                    if (val === undefined) return s;
+                    const parsed = parseFloat(val);
+                    return parsed > 1 ? { ...s, odds_decimal: parsed } : s;
+                  }),
+                }));
+                setEditingOdds({});
+                setSaving(false);
+              }}
+              disabled={saving}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-green-accent text-white hover:bg-green-bright transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : `Save All (${Object.keys(editingOdds).length})`}
+            </button>
+          )}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[700px]">
@@ -274,8 +321,23 @@ export function MarketDetailAdmin({
                         )}
                       </div>
                     </td>
-                    <td className="px-3 py-2.5 text-right text-white/50 text-xs font-mono">
-                      {impliedProbability(Number(sel.odds_decimal)).toFixed(1)}%
+                    <td className="px-3 py-2.5 text-right text-xs font-mono">
+                      {(() => {
+                        const liveOdds = getLiveOdds(sel);
+                        const savedOdds = Number(sel.odds_decimal);
+                        const liveProb = impliedProbability(liveOdds);
+                        const changed = editingOdds[sel.id] !== undefined && Math.abs(liveOdds - savedOdds) > 0.005;
+                        return (
+                          <span className={changed ? 'text-gold' : 'text-white/50'}>
+                            {liveProb.toFixed(1)}%
+                            {changed && (
+                              <span className="text-white/30 ml-1">
+                                ({impliedProbability(savedOdds).toFixed(1)}%)
+                              </span>
+                            )}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-3 py-2.5 text-right text-white/60">
                       {formatCurrency(sel.total_staked)}
@@ -326,9 +388,14 @@ export function MarketDetailAdmin({
           <div className="text-[10px] text-white/40 uppercase tracking-wide mb-1">Worst Case</div>
           <div className="text-lg font-bold text-danger">{formatCurrency(exposure.worst_case)}</div>
         </div>
-        <div className="bg-navy-card border border-white/8 rounded-xl p-4">
+        <div className={`bg-navy-card border rounded-xl p-4 ${overroundChanged ? 'border-gold/30' : 'border-white/8'}`}>
           <div className="text-[10px] text-white/40 uppercase tracking-wide mb-1">Overround</div>
-          <div className="text-lg font-bold text-white">{exposure.overround.toFixed(1)}%</div>
+          <div className={`text-lg font-bold ${overroundChanged ? 'text-gold' : 'text-white'}`}>
+            {overround.toFixed(1)}%
+          </div>
+          {overroundChanged && (
+            <div className="text-[10px] text-white/30 mt-0.5">was {savedOverround.toFixed(1)}%</div>
+          )}
         </div>
       </div>
 
