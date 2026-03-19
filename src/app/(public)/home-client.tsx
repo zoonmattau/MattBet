@@ -187,10 +187,6 @@ export function HomeClient({
       {/* ===== HERO BANNER ===== */}
       <section className="-mx-4 px-6 pt-8 pb-6 bg-[#0f1923] border-b border-white/[0.06]">
         <div className="text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-bright/10 border border-green-bright/20 mb-4">
-            <span className="w-2 h-2 rounded-full bg-green-bright animate-pulse" />
-            <span className="text-green-bright text-xs font-bold tracking-wide uppercase">{tripStatus}</span>
-          </div>
           <h1 className="text-5xl md:text-6xl font-black tracking-tighter leading-none">
             <span className="text-white">Matt</span><span className="text-green-bright">Bet</span>
           </h1>

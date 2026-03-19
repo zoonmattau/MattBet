@@ -7,11 +7,11 @@ import { BetSlip } from '@/components/bet-slip';
 import Link from 'next/link';
 
 const MARKET_DESCRIPTIONS: Record<string, string> = {
-  'trip-champion': 'The player with the most total points across all 4 rounds wins. Dead heat rules apply if tied.',
-  'winning-team': 'The team (group) with the most combined points across all 4 rounds. Dead heat rules apply.',
-  'overall-top-3': 'Settled on the top 3 individual point scorers across the trip. Dead heat rules apply at the cut-off.',
-  'overall-bottom-3': 'Settled on the 3 lowest individual point scorers across the trip. Dead heat rules apply.',
-  'wooden-spoon': 'The player with the fewest total points across all 4 rounds. Dead heat rules apply.',
+  'trip-champion': 'Most total points across all 4 rounds wins. Points from Stableford (R1), Match Play (R2/R3) and 1v1s (R4) all count. Dead heat rules apply.',
+  'winning-team': 'The group with the most combined points across all 4 rounds. Each group has 4 players — all their points add up. Dead heat rules apply.',
+  'overall-top-3': 'Finish in the top 3 on total points across the trip. Includes points from all 4 rounds. Dead heat rules apply at the cut-off.',
+  'overall-bottom-3': 'Finish in the bottom 3 on total points across the trip. Includes points from all 4 rounds. Dead heat rules apply.',
+  'wooden-spoon': 'The player with the fewest total points across all 4 rounds. Includes Stableford, Match Play and 1v1 points. Dead heat rules apply.',
   'friday-stableford-winner': 'Highest net stableford score in Round 1. Handicaps applied. Dead heat rules apply.',
   'friday-last-place': 'Lowest net stableford score in Round 1. Dead heat rules apply.',
   'friday-top-3': 'Top 3 stableford scorers on Friday. Dead heat rules apply at the cut-off.',

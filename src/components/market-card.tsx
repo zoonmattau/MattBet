@@ -7,6 +7,16 @@ import Link from 'next/link';
 
 const COLLAPSE_THRESHOLD = 6;
 
+const MARKET_SUBTITLES: Record<string, string> = {
+  'trip-champion': 'Most total points across all 4 rounds',
+  'winning-team': 'Most combined team points across all rounds',
+  'overall-top-3': 'Top 3 on total points across the trip',
+  'overall-bottom-3': 'Bottom 3 on total points across the trip',
+  'wooden-spoon': 'Fewest total points across all rounds',
+  'friday-stableford-winner': 'Highest net stableford score in Round 1',
+  'friday-top-3': 'Top 3 stableford scorers on Friday',
+};
+
 interface MarketCardProps {
   market: Market & { selections: MarketSelection[] };
   onSelectBet?: (market: Market, selection: MarketSelection) => void;
@@ -39,6 +49,9 @@ export function MarketCard({ market, onSelectBet, selectedSelectionId, showLink 
               </Link>
             ) : (
               <h3 className="text-white font-bold text-[15px]">{market.title}</h3>
+            )}
+            {MARKET_SUBTITLES[market.slug] && (
+              <div className="text-[12px] text-white/35 mt-0.5">{MARKET_SUBTITLES[market.slug]}</div>
             )}
             <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
               <StatusBadge status={market.status} />
