@@ -25,7 +25,7 @@ export function MarketCard({ market, onSelectBet, selectedSelectionId, showLink 
   const visible = shouldCollapse && !expanded ? sorted.slice(0, COLLAPSE_THRESHOLD) : sorted;
 
   return (
-    <div className={`card-elevated rounded-xl overflow-hidden ${market.is_featured ? 'card-featured' : ''}`}>
+    <div className="card-elevated rounded-xl overflow-hidden">
       {/* Header */}
       <div className="px-4 py-3 border-b border-white/[0.06]">
         <div className="flex items-start justify-between gap-2">
@@ -42,7 +42,6 @@ export function MarketCard({ market, onSelectBet, selectedSelectionId, showLink 
             )}
             <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
               <StatusBadge status={market.status} />
-              {market.is_featured && <FeaturedBadge />}
               {market.round_label && <RoundBadge label={market.round_label} />}
             </div>
           </div>

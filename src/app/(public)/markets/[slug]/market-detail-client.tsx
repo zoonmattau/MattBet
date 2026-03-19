@@ -2,9 +2,8 @@
 
 import { useState } from 'react';
 import { Market, MarketSelection, BetSlipItem } from '@/lib/types';
-import { StatusBadge, RoundBadge, FeaturedBadge, CategoryBadge } from '@/components/status-badge';
+import { RoundBadge, CategoryBadge } from '@/components/status-badge';
 import { BetSlip } from '@/components/bet-slip';
-import { impliedProbability } from '@/lib/exposure';
 import Link from 'next/link';
 
 const MARKET_DESCRIPTIONS: Record<string, string> = {
@@ -75,10 +74,6 @@ export function MarketDetailClient({ market }: MarketDetailClientProps) {
     return Number(a.odds_decimal) - Number(b.odds_decimal);
   });
 
-  const overround = market.selections.reduce(
-    (sum, s) => sum + 1 / Number(s.odds_decimal),
-    0
-  ) * 100;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
@@ -93,7 +88,6 @@ export function MarketDetailClient({ market }: MarketDetailClientProps) {
             <h1 className="text-xl font-bold text-white mb-3">{market.title}</h1>
             <div className="flex items-center gap-2 flex-wrap mb-4">
               <CategoryBadge category={market.category} />
-              {market.is_featured && <FeaturedBadge />}
               {market.round_label && <RoundBadge label={market.round_label} />}
             </div>
 
@@ -111,9 +105,6 @@ export function MarketDetailClient({ market }: MarketDetailClientProps) {
               </div>
             )}
 
-            <div className="text-xs text-white/30">
-              Market margin: {overround.toFixed(1)}%
-            </div>
           </div>
 
           {/* Selections - list format, favourite to longshot */}
@@ -134,14 +125,11 @@ export function MarketDetailClient({ market }: MarketDetailClientProps) {
                     }`}
                   >
                     <div className="flex-1 min-w-0">
-                      <span className={`text-sm font-medium ${isSelected ? 'text-white' : 'text-white/70'}`}>
+                      <span className={`text-[14px] font-medium ${isSelected ? 'text-white' : 'text-white/70'}`}>
                         {sel.name}
                       </span>
-                      <span className="text-xs text-white/25 ml-2">
-                        {impliedProbability(Number(sel.odds_decimal)).toFixed(0)}%
-                      </span>
                     </div>
-                    <span className={`text-sm font-bold font-mono ${isSelected ? 'text-green-bright' : 'text-green-bright/80'}`}>
+                    <span className={`text-[14px] font-black font-mono odds-display px-3 py-1.5 rounded-lg odds-btn ${isSelected ? 'selected' : ''}`}>
                       ${Number(sel.odds_decimal).toFixed(2)}
                     </span>
                   </button>

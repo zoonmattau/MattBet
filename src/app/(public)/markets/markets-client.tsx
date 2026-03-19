@@ -205,21 +205,8 @@ export function MarketsClient({ matches, markets }: MarketsClientProps) {
         ))}
       </div>
 
-      {/* Bet slip on mobile - top */}
-      {betSlip.length > 0 && (
-        <div className="lg:hidden mb-4">
-          <BetSlip
-            items={betSlip}
-            onRemove={removeItem}
-            onClear={clear}
-            onBetPlaced={clear}
-            allMarkets={markets}
-          />
-        </div>
-      )}
-
-      <div className={`grid gap-6 ${betSlip.length > 0 ? 'lg:grid-cols-3' : ''}`}>
-        <div className={`${betSlip.length > 0 ? 'lg:col-span-2' : ''} space-y-3`}>
+      <div>
+        <div className="space-y-3">
 
           {/* SEARCH RESULTS */}
           {isSearching && (
@@ -271,19 +258,6 @@ export function MarketsClient({ matches, markets }: MarketsClientProps) {
           )}
         </div>
 
-        {betSlip.length > 0 && (
-          <div className="hidden lg:block lg:col-span-1">
-            <div className="lg:sticky lg:top-4">
-              <BetSlip
-                items={betSlip}
-                onRemove={removeItem}
-                onClear={clear}
-                onBetPlaced={clear}
-                allMarkets={markets}
-              />
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -377,9 +351,9 @@ function RoundMatchTab({
                 {sortedSels.length > 0 ? (
                   <div className="flex gap-2">
                     {sortedSels.map((sel) => (
-                      <div key={sel.id} className="flex-1 flex items-center justify-between px-3 py-2.5 rounded-lg bg-odds-bg/50 border border-green-bright/10">
-                        <span className="text-xs text-white/60">{sel.name}</span>
-                        <span className="text-sm text-green-bright font-bold font-mono">
+                      <div key={sel.id} className="flex-1 flex flex-col items-center py-2.5 px-2 rounded-lg odds-btn">
+                        <span className="text-[11px] text-white/60 font-medium mb-1">{sel.name}</span>
+                        <span className="text-[14px] font-black font-mono odds-display">
                           ${Number(sel.odds_decimal).toFixed(2)}
                         </span>
                       </div>
@@ -722,11 +696,7 @@ function MarketBlock({
               <span className={`text-[13px] ${isSelected ? 'text-white font-medium' : 'text-white/60'}`}>{sel.name}</span>
               {TEAM_MEMBERS[sel.name] && <span className="text-[11px] text-white/25 ml-1.5">{TEAM_MEMBERS[sel.name]}</span>}
             </div>
-            <span className={`text-[13px] font-bold font-mono shrink-0 ml-3 px-2.5 py-1 rounded-md border transition-colors ${
-              isSelected
-                ? 'text-green-bright bg-green-bright/15 border-green-bright/30'
-                : 'text-green-bright/80 bg-odds-bg/50 border-green-bright/10'
-            }`}>
+            <span className={`text-[14px] font-black font-mono odds-display px-3 py-1.5 rounded-lg odds-btn ${isSelected ? 'selected' : ''}`}>
               ${Number(sel.odds_decimal).toFixed(2)}
             </span>
           </button>

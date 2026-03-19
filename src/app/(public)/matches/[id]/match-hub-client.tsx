@@ -146,21 +146,8 @@ export function MatchHubClient({ matches, match, markets, allH2H, fridayWinner }
         </div>
       </div>
 
-      {/* Bet slip on mobile - top */}
-      {betSlip.length > 0 && (
-        <div className="lg:hidden mb-4">
-          <BetSlip
-            items={betSlip}
-            onRemove={removeItem}
-            onClear={clear}
-            onBetPlaced={clear}
-            allMarkets={Object.values(markets)}
-          />
-        </div>
-      )}
-
-      <div className={`grid gap-6 ${betSlip.length > 0 ? 'lg:grid-cols-3' : ''}`}>
-        <div className={`${betSlip.length > 0 ? 'lg:col-span-2' : ''} space-y-4`}>
+      <div>
+        <div className="space-y-4">
           {/* Head to Head */}
           {h2h && (
             <MarketBlock
@@ -206,17 +193,6 @@ export function MatchHubClient({ matches, match, markets, allH2H, fridayWinner }
           </div>
         </div>
 
-        <div className="hidden lg:block lg:col-span-1">
-          <div className="lg:sticky lg:top-4">
-            <BetSlip
-              items={betSlip}
-              onRemove={removeItem}
-              onClear={clear}
-              onBetPlaced={clear}
-              allMarkets={Object.values(markets)}
-            />
-          </div>
-        </div>
       </div>
       </div>
     </div>

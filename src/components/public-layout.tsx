@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { FloatingBetSlip } from './floating-betslip';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Home', icon: '/' },
@@ -70,13 +71,13 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             const active = isActive(item.href);
             return (
               <Link key={item.href} href={item.href}
-                className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 relative ${
+                className={`flex-1 flex flex-col items-center gap-1 py-4 relative ${
                   active ? 'text-green-bright' : 'text-white/25'
                 }`}>
                 {active && (
-                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-5 h-[2px] bg-green-bright rounded-full" />
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[3px] bg-green-bright rounded-full" />
                 )}
-                <span className={`text-[10px] font-semibold ${active ? 'text-green-bright' : 'text-white/30'}`}>
+                <span className={`text-sm font-bold ${active ? 'text-green-bright' : 'text-white/40'}`}>
                   {item.label}
                 </span>
               </Link>
@@ -84,6 +85,9 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           })}
         </div>
       </nav>
+
+      {/* Floating bet slip */}
+      <FloatingBetSlip />
     </div>
   );
 }

@@ -1,53 +1,65 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useSyncExternalStore, useCallback } from 'react';
 import { BetSlipItem } from './types';
 
 const STORAGE_KEY = 'mattbet-betslip';
 
-export function useBetSlip() {
-  const [items, setItems] = useState<BetSlipItem[]>([]);
-  const [loaded, setLoaded] = useState(false);
+// Global state + listeners
+let items: BetSlipItem[] = [];
+let listeners = new Set<() => void>();
 
-  // Load from localStorage on mount
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setItems(JSON.parse(stored));
-      }
-    } catch {}
-    setLoaded(true);
+function emit() {
+  listeners.forEach((l) => l());
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  } catch {}
+}
+
+// Load from localStorage on first import
+if (typeof window !== 'undefined') {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) items = JSON.parse(stored);
+  } catch {}
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+function getSnapshot() {
+  return items;
+}
+
+function getServerSnapshot() {
+  return [] as BetSlipItem[];
+}
+
+export function useBetSlip() {
+  const currentItems = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+
+  const addItem = useCallback((market: BetSlipItem['market'], selection: BetSlipItem['selection']) => {
+    const existing = items.find((item) => item.selection.id === selection.id);
+    if (existing) {
+      items = items.filter((item) => item.selection.id !== selection.id);
+    } else {
+      const filtered = items.filter((item) => item.market.id !== market.id);
+      items = [...filtered, { market, selection, stake: 0 }];
+    }
+    emit();
   }, []);
 
-  // Save to localStorage on change
-  useEffect(() => {
-    if (loaded) {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-      } catch {}
-    }
-  }, [items, loaded]);
+  const removeItem = useCallback((selectionId: string) => {
+    items = items.filter((b) => b.selection.id !== selectionId);
+    emit();
+  }, []);
 
-  const addItem = (market: BetSlipItem['market'], selection: BetSlipItem['selection']) => {
-    setItems((prev) => {
-      const existing = prev.find((item) => item.selection.id === selection.id);
-      if (existing) {
-        return prev.filter((item) => item.selection.id !== selection.id);
-      }
-      // Remove any other selection from same market
-      const filtered = prev.filter((item) => item.market.id !== market.id);
-      return [...filtered, { market, selection, stake: 0 }];
-    });
-  };
+  const clear = useCallback(() => {
+    items = [];
+    emit();
+  }, []);
 
-  const removeItem = (selectionId: string) => {
-    setItems((prev) => prev.filter((b) => b.selection.id !== selectionId));
-  };
-
-  const clear = () => {
-    setItems([]);
-  };
-
-  return { items, addItem, removeItem, clear, loaded };
+  return { items: currentItems, addItem, removeItem, clear, loaded: true };
 }

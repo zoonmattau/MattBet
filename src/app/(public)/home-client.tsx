@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Market, MarketSelection, LeaderboardTeam, LeaderboardIndividual, Team, Player } from '@/lib/types';
 import Link from 'next/link';
+import { useBetSlip } from '@/lib/betslip-store';
 
 const TRIP_START = new Date('2026-04-03T08:00:00+11:00'); // 8am AEST April 3
 
@@ -129,6 +130,49 @@ function BetTicker({ realBets }: { realBets: TickerBet[] }) {
   );
 }
 
+function FeaturedMarketCard({ market, sorted }: { market: Market & { selections: MarketSelection[] }; sorted: MarketSelection[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const { items: betSlip, addItem } = useBetSlip();
+  const visible = expanded ? sorted : sorted.slice(0, 3);
+
+  return (
+    <div className="card-elevated card-featured rounded-xl overflow-hidden">
+      <Link href={`/markets/${market.slug}`}
+        className="block px-4 py-3 flex items-center justify-between border-b border-white/[0.06] hover:bg-white/[0.02] transition-colors">
+        <span className="text-white font-bold">{market.title}</span>
+        <span className="text-[10px] text-green-bright font-semibold uppercase tracking-wide">
+          {sorted.length} runners
+        </span>
+      </Link>
+      <div className="p-3">
+        <div>
+          {visible.map((sel) => {
+            const isSelected = betSlip.some((b) => b.selection.id === sel.id);
+            return (
+              <button key={sel.id}
+                onClick={() => addItem(market, sel)}
+                className="w-full flex items-center justify-between py-2.5 px-1 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02] transition-colors text-left">
+                <span className="text-[14px] text-white/70 font-medium">{sel.name}</span>
+                <span className={`text-[14px] font-black font-mono odds-display px-3 py-1.5 rounded-lg odds-btn ${isSelected ? 'selected' : ''}`}>
+                  ${Number(sel.odds_decimal).toFixed(2)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {sorted.length > 3 && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="w-full mt-2 text-center text-xs text-green-bright font-semibold py-2 hover:text-green-bright/80 transition-colors"
+          >
+            {expanded ? 'Show less' : `+${sorted.length - 3} more selections`}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function HomeClient({
   featuredMarkets,
   teams,
@@ -174,7 +218,7 @@ export function HomeClient({
 
       <div className="mt-6" />
 
-      {/* ===== FEATURED MARKETS - THE MAIN ATTRACTION ===== */}
+      {/* ===== FEATURED MARKETS ===== */}
       {featuredMarkets.length > 0 && (
         <section className="mb-8">
           <div className="flex items-center justify-between mb-4">
@@ -188,34 +232,8 @@ export function HomeClient({
               const sorted = [...market.selections].sort((a, b) =>
                 hasGroups ? a.sort_order - b.sort_order : Number(a.odds_decimal) - Number(b.odds_decimal)
               );
-              const topPicks = sorted.slice(0, 6);
               return (
-                <Link key={market.id} href={`/markets/${market.slug}`}
-                  className="block card-elevated card-featured rounded-xl overflow-hidden hover:border-white/15 transition-all">
-                  <div className="px-4 py-3 flex items-center justify-between border-b border-white/[0.06]">
-                    <span className="text-white font-bold">{market.title}</span>
-                    <span className="text-[10px] text-green-bright font-semibold uppercase tracking-wide">
-                      {sorted.length} runners
-                    </span>
-                  </div>
-                  <div className="p-3">
-                    <div className="divide-y divide-white/[0.04]">
-                      {topPicks.map((sel) => (
-                        <div key={sel.id} className="flex items-center justify-between py-2 px-1">
-                          <span className="text-[13px] text-white/60 font-medium">{sel.name}</span>
-                          <span className="text-[13px] text-green-bright font-bold font-mono">
-                            ${Number(sel.odds_decimal).toFixed(2)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                    {sorted.length > 6 && (
-                      <div className="mt-2 text-center text-xs text-green-bright/50 font-medium">
-                        +{sorted.length - 6} more selections &rarr;
-                      </div>
-                    )}
-                  </div>
-                </Link>
+                <FeaturedMarketCard key={market.id} market={market} sorted={sorted} />
               );
             })}
           </div>
